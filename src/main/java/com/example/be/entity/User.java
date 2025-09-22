@@ -2,6 +2,7 @@ package com.example.be.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -27,7 +28,14 @@ public class User {
 
     private String fullName;
 
-    private String role;
+    // Thay đổi từ String sang Entity
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    private Role role;
 
     private String status;
+
+    // Quyền riêng cho user này
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private Set<UserPermission> userPermissions;
 }

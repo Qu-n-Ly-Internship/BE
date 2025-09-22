@@ -1,6 +1,8 @@
 package com.example.be.controller;
 
+import com.example.be.entity.Role;
 import com.example.be.entity.User;
+import com.example.be.repository.RoleRepository;
 import com.example.be.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +21,7 @@ import java.util.Map;
 public class AdminController {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // Tạo user mới với email và password
@@ -28,39 +31,36 @@ public class AdminController {
             String email = request.get("email");
             String password = request.get("password");
             String fullName = request.get("fullName");
-            String role = request.get("role");
+            String roleName = request.get("role") != null ? request.get("role").toUpperCase() : "INTERN";
 
-            // Kiểm tra email đã tồn tại
             if (userRepository.findByEmail(email).isPresent()) {
-                Map<String, String> error = new HashMap<>();
-                error.put("message", "Email đã tồn tại!");
-                return ResponseEntity.badRequest().body(error);
+                return ResponseEntity.badRequest().body(Map.of("message", "Email đã tồn tại!"));
             }
+
+            Role role = roleRepository.findByName(roleName)
+                    .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
 
             User user = new User();
             user.setFullName(fullName);
             user.setEmail(email);
-            user.setUsername(email); // Sử dụng email làm username
+            user.setUsername(email);
             user.setPassword(passwordEncoder.encode(password));
             user.setRole(role);
-            user.setStatus("ACTIVE"); // Tạo ngay với trạng thái ACTIVE
+            user.setStatus("ACTIVE");
 
             User savedUser = userRepository.save(user);
 
-            // Trả về user đã tạo (không bao gồm password)
             Map<String, Object> response = new HashMap<>();
             response.put("id", savedUser.getId());
             response.put("fullName", savedUser.getFullName());
             response.put("email", savedUser.getEmail());
-            response.put("role", savedUser.getRole());
+            response.put("role", savedUser.getRole().getName());
             response.put("status", savedUser.getStatus());
 
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Tạo tài khoản thất bại: " + e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of("message", "Tạo tài khoản thất bại: " + e.getMessage()));
         }
     }
 
@@ -77,34 +77,28 @@ public class AdminController {
             Pageable pageable = PageRequest.of(page, size);
             Page<User> users = userRepository.findAll(pageable);
 
-            // Simple filtering (you can enhance this with custom queries)
             var filteredUsers = users.getContent().stream()
                     .filter(user -> query.isEmpty() ||
                             user.getFullName().toLowerCase().contains(query.toLowerCase()) ||
                             user.getEmail().toLowerCase().contains(query.toLowerCase()))
-                    .filter(user -> role.isEmpty() || user.getRole().equals(role))
-                    .filter(user -> status.isEmpty() || user.getStatus().equals(status))
-                    .map(user -> {
-                        Map<String, Object> userMap = new HashMap<>();
-                        userMap.put("id", user.getId());
-                        userMap.put("fullName", user.getFullName());
-                        userMap.put("email", user.getEmail());
-                        userMap.put("role", user.getRole());
-                        userMap.put("status", user.getStatus());
-                        return userMap;
-                    }).toList();
+                    .filter(user -> role.isEmpty() || user.getRole().getName().equalsIgnoreCase(role))
+                    .filter(user -> status.isEmpty() || user.getStatus().equalsIgnoreCase(status))
+                    .map(user -> Map.of(
+                            "id", user.getId(),
+                            "fullName", user.getFullName(),
+                            "email", user.getEmail(),
+                            "role", user.getRole().getName(),
+                            "status", user.getStatus()
+                    )).toList();
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("content", filteredUsers);
-            response.put("total", (long) filteredUsers.size());
-            response.put("totalPages", 1);
-
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of(
+                    "content", filteredUsers,
+                    "total", filteredUsers.size(),
+                    "totalPages", 1
+            ));
 
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Không thể tải danh sách: " + e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of("message", "Không thể tải danh sách: " + e.getMessage()));
         }
     }
 
@@ -112,35 +106,27 @@ public class AdminController {
     @PutMapping("/users/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody Map<String, String> request) {
         try {
-            var userOpt = userRepository.findById(id);
-            if (userOpt.isEmpty()) {
-                Map<String, String> error = new HashMap<>();
-                error.put("message", "Không tìm thấy user!");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-            User user = userOpt.get();
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
 
             if (request.containsKey("fullName")) {
                 user.setFullName(request.get("fullName"));
             }
             if (request.containsKey("role")) {
-                user.setRole(request.get("role"));
+                String roleName = request.get("role").toUpperCase();
+                Role role = roleRepository.findByName(roleName)
+                        .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
+                user.setRole(role);
             }
             if (request.containsKey("status")) {
                 user.setStatus(request.get("status"));
             }
 
             userRepository.save(user);
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Cập nhật thành công");
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("message", "Cập nhật thành công"));
 
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Cập nhật thất bại: " + e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of("message", "Cập nhật thất bại: " + e.getMessage()));
         }
     }
 
@@ -149,72 +135,40 @@ public class AdminController {
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
             if (!userRepository.existsById(id)) {
-                Map<String, String> error = new HashMap<>();
-                error.put("message", "Không tìm thấy user!");
-                return ResponseEntity.badRequest().body(error);
+                return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy user!"));
             }
-
             userRepository.deleteById(id);
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Xóa thành công");
-            return ResponseEntity.ok(response);
-
+            return ResponseEntity.ok(Map.of("message", "Xóa thành công"));
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Xóa thất bại: " + e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of("message", "Xóa thất bại: " + e.getMessage()));
         }
     }
 
-    // Duyệt user (từ PENDING -> ACTIVE) - giữ lại method cũ
+    // Duyệt user
     @PutMapping("/approve/{id}")
     public ResponseEntity<?> approveUser(@PathVariable Long id) {
         try {
-            var userOpt = userRepository.findById(id);
-            if (userOpt.isEmpty()) {
-                Map<String, String> error = new HashMap<>();
-                error.put("message", "Không tìm thấy user!");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-            User user = userOpt.get();
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
             user.setStatus("ACTIVE");
             userRepository.save(user);
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "User " + user.getEmail() + " đã được duyệt!");
-            return ResponseEntity.ok(response);
-
+            return ResponseEntity.ok(Map.of("message", "User " + user.getEmail() + " đã được duyệt!"));
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Duyệt thất bại: " + e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of("message", "Duyệt thất bại: " + e.getMessage()));
         }
     }
 
-    // Khóa user (ACTIVE -> INACTIVE) - cập nhật method cũ
+    // Khóa user
     @PutMapping("/disable/{id}")
     public ResponseEntity<?> disableUser(@PathVariable Long id) {
         try {
-            var userOpt = userRepository.findById(id);
-            if (userOpt.isEmpty()) {
-                Map<String, String> error = new HashMap<>();
-                error.put("message", "Không tìm thấy user!");
-                return ResponseEntity.badRequest().body(error);
-            }
-
-            User user = userOpt.get();
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
             user.setStatus("INACTIVE");
             userRepository.save(user);
-
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "User " + user.getEmail() + " đã bị khóa!");
-            return ResponseEntity.ok(response);
-
+            return ResponseEntity.ok(Map.of("message", "User " + user.getEmail() + " đã bị khóa!"));
         } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Khóa thất bại: " + e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of("message", "Khóa thất bại: " + e.getMessage()));
         }
     }
 }
