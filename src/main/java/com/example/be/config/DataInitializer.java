@@ -1,4 +1,3 @@
-// Cập nhật DataInitializer.java để tạo roles và permissions mặc định
 package com.example.be.config;
 
 import com.example.be.entity.Permission;
@@ -25,14 +24,21 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // 1. Tạo Permissions
+        System.out.println("🚀 Starting DataInitializer...");
+
+        // 1. Tạo Permissions trước
         createPermissionsIfNotExist();
 
         // 2. Tạo Roles với permissions
         createRolesIfNotExist();
 
-        // 3. Tạo admin account
+        // 3. Fix existing users có role = NULL
+        fixExistingUsersWithNullRole();
+
+        // 4. Tạo admin account nếu chưa có
         createAdminIfNotExist();
+
+        System.out.println("✅ DataInitializer completed!");
     }
 
     private void createPermissionsIfNotExist() {
@@ -61,7 +67,7 @@ public class DataInitializer implements CommandLineRunner {
                         .module(perm[2])
                         .build();
                 permissionRepository.save(permission);
-                System.out.println("✅ Đã tạo permission: " + perm[0]);
+                System.out.println("✅ Created permission: " + perm[0]);
             }
         }
     }
@@ -75,7 +81,7 @@ public class DataInitializer implements CommandLineRunner {
                     .permissions(Set.copyOf(permissionRepository.findAll()))
                     .build();
             roleRepository.save(adminRole);
-            System.out.println("✅ Đã tạo role: ADMIN với tất cả permissions");
+            System.out.println("✅ Created role: ADMIN với tất cả permissions");
         }
 
         // HR - Quản lý user và thực tập sinh
@@ -95,7 +101,7 @@ public class DataInitializer implements CommandLineRunner {
                     .permissions(hrPermissions)
                     .build();
             roleRepository.save(hrRole);
-            System.out.println("✅ Đã tạo role: HR");
+            System.out.println("✅ Created role: HR");
         }
 
         // MENTOR - Theo dõi thực tập sinh
@@ -112,7 +118,7 @@ public class DataInitializer implements CommandLineRunner {
                     .permissions(mentorPermissions)
                     .build();
             roleRepository.save(mentorRole);
-            System.out.println("✅ Đã tạo role: MENTOR");
+            System.out.println("✅ Created role: MENTOR");
         }
 
         // INTERN - Chỉ xem thông tin của mình
@@ -126,7 +132,48 @@ public class DataInitializer implements CommandLineRunner {
                     .permissions(internPermissions)
                     .build();
             roleRepository.save(internRole);
-            System.out.println("✅ Đã tạo role: INTERN");
+            System.out.println("✅ Created role: INTERN");
+        }
+    }
+
+    // 🔧 FIX: Sửa users có role = NULL
+    private void fixExistingUsersWithNullRole() {
+        var usersWithNullRole = userRepository.findAll().stream()
+                .filter(user -> user.getRole() == null)
+                .toList();
+
+        if (usersWithNullRole.isEmpty()) {
+            System.out.println("✅ No users with NULL role found");
+            return;
+        }
+
+        System.out.println("🔧 Fixing " + usersWithNullRole.size() + " users with NULL role...");
+
+        for (User user : usersWithNullRole) {
+            String roleName = determineRoleFromEmail(user.getEmail());
+            Role role = roleRepository.findByName(roleName).orElseThrow();
+
+            user.setRole(role);
+
+            // Set status nếu NULL
+            if (user.getStatus() == null) {
+                user.setStatus("ACTIVE");
+            }
+
+            userRepository.save(user);
+            System.out.println("✅ Fixed user: " + user.getEmail() + " -> Role: " + roleName);
+        }
+    }
+
+    private String determineRoleFromEmail(String email) {
+        if (email.toLowerCase().contains("admin")) {
+            return "ADMIN";
+        } else if (email.toLowerCase().contains("hr")) {
+            return "HR";
+        } else if (email.toLowerCase().contains("mentor")) {
+            return "MENTOR";
+        } else {
+            return "INTERN";  // Default
         }
     }
 
@@ -144,7 +191,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
 
             userRepository.save(admin);
-            System.out.println("✅ Đã tạo admin account: admin@company.com / admin123");
+            System.out.println("✅ Created admin account: admin@company.com / admin123");
         }
     }
 }
