@@ -22,12 +22,12 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // ==================== REGISTER ====================
-    public String register(RegisterRequest request) {
+    public Map<String, Object> register(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            return "Email đã tồn tại!";
+            return Map.of("message", "Email đã tồn tại!");
         }
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            return "Username đã tồn tại!";
+            return Map.of("message", "Username đã tồn tại!");
         }
 
         // Tạo user mới
@@ -44,9 +44,16 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
         user.setRole(role);
 
-        userRepository.save(user);
-        return "Đăng ký thành công! Role: " + role.getName();
+        User savedUser = userRepository.save(user);
+
+        // Trả về Map gồm id + message + role
+        return Map.of(
+                "message", "Đăng ký thành công!",
+                "id", savedUser.getId(),
+                "role", savedUser.getRole().getName()
+        );
     }
+
 
     // ==================== LOGIN (trả String đơn giản) ====================
     public String login(LoginRequest request) {
