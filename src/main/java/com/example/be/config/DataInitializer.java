@@ -43,20 +43,35 @@ public class DataInitializer implements CommandLineRunner {
 
     private void createPermissionsIfNotExist() {
         String[][] permissions = {
-                {"READ_USERS", "Xem danh sách users", "USER_MANAGEMENT"},
-                {"CREATE_USERS", "Tạo user mới", "USER_MANAGEMENT"},
-                {"UPDATE_USERS", "Cập nhật thông tin user", "USER_MANAGEMENT"},
-                {"DELETE_USERS", "Xóa user", "USER_MANAGEMENT"},
-                {"MANAGE_ROLES", "Quản lý vai trò", "USER_MANAGEMENT"},
-                {"MANAGE_PERMISSIONS", "Quản lý quyền", "USER_MANAGEMENT"},
+                // Dashboard
+                {"VIEW_DASHBOARD", "Xem Dashboard", "DASHBOARD"},
 
-                {"READ_INTERNSHIPS", "Xem thông tin thực tập", "INTERNSHIP_MANAGEMENT"},
-                {"CREATE_INTERNSHIPS", "Tạo chương trình thực tập", "INTERNSHIP_MANAGEMENT"},
-                {"UPDATE_INTERNSHIPS", "Cập nhật thông tin thực tập", "INTERNSHIP_MANAGEMENT"},
-                {"APPROVE_INTERNSHIPS", "Duyệt thực tập sinh", "INTERNSHIP_MANAGEMENT"},
+                // Internship Management
+                {"VIEW_INTERNSHIPS", "Xem danh sách thực tập", "INTERNSHIP_MANAGEMENT"},
+                {"CREATE_INTERNSHIP", "Tạo thực tập mới", "INTERNSHIP_MANAGEMENT"},
+                {"EDIT_INTERNSHIP", "Chỉnh sửa thực tập", "INTERNSHIP_MANAGEMENT"},
+                {"DELETE_INTERNSHIP", "Xóa thực tập", "INTERNSHIP_MANAGEMENT"},
 
-                {"VIEW_REPORTS", "Xem báo cáo", "REPORTING"},
-                {"EXPORT_DATA", "Xuất dữ liệu", "REPORTING"}
+                // Student Management
+                {"VIEW_STUDENTS", "Xem danh sách sinh viên", "STUDENT_MANAGEMENT"},
+                {"CREATE_STUDENT", "Thêm sinh viên mới", "STUDENT_MANAGEMENT"},
+                {"EDIT_STUDENT", "Chỉnh sửa sinh viên", "STUDENT_MANAGEMENT"},
+                {"DELETE_STUDENT", "Xóa sinh viên", "STUDENT_MANAGEMENT"},
+
+                // Company Management
+                {"VIEW_COMPANIES", "Xem danh sách công ty", "COMPANY_MANAGEMENT"},
+                {"CREATE_COMPANY", "Thêm công ty mới", "COMPANY_MANAGEMENT"},
+                {"EDIT_COMPANY", "Chỉnh sửa công ty", "COMPANY_MANAGEMENT"},
+                {"DELETE_COMPANY", "Xóa công ty", "COMPANY_MANAGEMENT"},
+
+                // User Management
+                {"MANAGE_USERS", "Quản lý người dùng", "USER_MANAGEMENT"},
+
+                // Permission Management
+                {"MANAGE_PERMISSIONS", "Quản lý phân quyền", "PERMISSION_MANAGEMENT"},
+
+                // Reporting
+                {"VIEW_REPORTS", "Xem báo cáo", "REPORTING"}
         };
 
         for (String[] perm : permissions) {
@@ -87,12 +102,17 @@ public class DataInitializer implements CommandLineRunner {
         // HR - Quản lý user và thực tập sinh
         if (roleRepository.findByName("HR").isEmpty()) {
             Set<Permission> hrPermissions = Set.of(
-                    permissionRepository.findByName("READ_USERS").orElseThrow(),
-                    permissionRepository.findByName("CREATE_USERS").orElseThrow(),
-                    permissionRepository.findByName("UPDATE_USERS").orElseThrow(),
-                    permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("CREATE_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("APPROVE_INTERNSHIPS").orElseThrow(),
+                    permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
+                    permissionRepository.findByName("VIEW_INTERNSHIPS").orElseThrow(),
+                    permissionRepository.findByName("CREATE_INTERNSHIP").orElseThrow(),
+                    permissionRepository.findByName("EDIT_INTERNSHIP").orElseThrow(),
+                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
+                    permissionRepository.findByName("CREATE_STUDENT").orElseThrow(),
+                    permissionRepository.findByName("EDIT_STUDENT").orElseThrow(),
+                    permissionRepository.findByName("VIEW_COMPANIES").orElseThrow(),
+                    permissionRepository.findByName("CREATE_COMPANY").orElseThrow(),
+                    permissionRepository.findByName("EDIT_COMPANY").orElseThrow(),
+                    permissionRepository.findByName("MANAGE_USERS").orElseThrow(),
                     permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
             );
             Role hrRole = Role.builder()
@@ -107,9 +127,12 @@ public class DataInitializer implements CommandLineRunner {
         // MENTOR - Theo dõi thực tập sinh
         if (roleRepository.findByName("MENTOR").isEmpty()) {
             Set<Permission> mentorPermissions = Set.of(
-                    permissionRepository.findByName("READ_USERS").orElseThrow(),
-                    permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("UPDATE_INTERNSHIPS").orElseThrow(),
+                    permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
+                    permissionRepository.findByName("VIEW_INTERNSHIPS").orElseThrow(),
+                    permissionRepository.findByName("EDIT_INTERNSHIP").orElseThrow(),
+                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
+                    permissionRepository.findByName("EDIT_STUDENT").orElseThrow(),
+                    permissionRepository.findByName("VIEW_COMPANIES").orElseThrow(),
                     permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
             );
             Role mentorRole = Role.builder()
@@ -124,7 +147,10 @@ public class DataInitializer implements CommandLineRunner {
         // INTERN - Chỉ xem thông tin của mình
         if (roleRepository.findByName("INTERN").isEmpty()) {
             Set<Permission> internPermissions = Set.of(
-                    permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow()
+                    permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
+                    permissionRepository.findByName("VIEW_INTERNSHIPS").orElseThrow(),
+                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
+                    permissionRepository.findByName("VIEW_COMPANIES").orElseThrow()
             );
             Role internRole = Role.builder()
                     .name("INTERN")
