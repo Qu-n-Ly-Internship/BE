@@ -57,7 +57,7 @@ public class PermissionController {
         )).toList();
 
         return ResponseEntity.ok(Map.of(
-                "role", Map.of("id", role.getId(), "name", role.getName()),
+                "role",role.getName(),
                 "permissions", permissions
         ));
     }

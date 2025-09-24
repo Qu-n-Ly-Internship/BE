@@ -23,37 +23,52 @@ public class AuthService {
 
     // ==================== REGISTER ====================
     public Map<String, Object> register(RegisterRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            return Map.of("message", "Email đã tồn tại!");
+        try {
+            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                return Map.of("success", false, "message", "Email đã tồn tại!");
+            }
+            if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+                return Map.of("success", false, "message", "Username đã tồn tại!");
+            }
+
+            // Tạo user mới
+            User user = new User();
+            user.setEmail(request.getEmail());
+            user.setUsername(request.getUsername());
+            user.setFullName(request.getFullName());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setStatus("PENDING");
+
+            // Lấy role từ DB, mặc định là INTERN
+            String roleName = request.getRole() != null ? request.getRole().toUpperCase() : "INTERN";
+            Role role = roleRepository.findByName(roleName)
+                    .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
+            user.setRole(role);
+
+            User savedUser = userRepository.save(user);
+
+            // Trả về format đồng nhất với login
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đăng ký thành công!");
+            response.put("user", Map.of(
+                    "id", savedUser.getId(),
+                    "fullName", savedUser.getFullName(),
+                    "email", savedUser.getEmail(),
+                    "username", savedUser.getUsername(),
+                    "status", savedUser.getStatus(),
+                    "role", savedUser.getRole().getName() // Trả về role name string
+            ));
+
+            return response;
+
+        } catch (Exception e) {
+            return Map.of(
+                    "success", false,
+                    "message", "Đăng ký thất bại: " + e.getMessage()
+            );
         }
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            return Map.of("message", "Username đã tồn tại!");
-        }
-
-        // Tạo user mới
-        User user = new User();
-        user.setEmail(request.getEmail());
-        user.setUsername(request.getUsername());
-        user.setFullName(request.getFullName());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setStatus("PENDING");
-
-        // Lấy role từ DB, mặc định là INTERN
-        String roleName = request.getRole() != null ? request.getRole().toUpperCase() : "INTERN";
-        Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
-        user.setRole(role);
-
-        User savedUser = userRepository.save(user);
-
-        // Trả về Map gồm id + message + role
-        return Map.of(
-                "message", "Đăng ký thành công!",
-                "id", savedUser.getId(),
-                "role", savedUser.getRole().getName()
-        );
     }
-
 
     // ==================== LOGIN (trả String đơn giản) ====================
     public String login(LoginRequest request) {
@@ -94,18 +109,15 @@ public class AuthService {
             return response;
         }
 
-        // Mock JWT token
-        String token = "mock-jwt-token-" + user.getId() + "-" + System.currentTimeMillis();
-
         response.put("success", true);
         response.put("message", "Đăng nhập thành công!");
-        response.put("token", token);
         response.put("user", Map.of(
                 "id", user.getId(),
                 "fullName", user.getFullName(),
                 "email", user.getEmail(),
-                "role", user.getRole().getName(),
-                "status", user.getStatus()
+                "username", user.getUsername(),
+                "status", user.getStatus(),
+                "role", user.getRole().getName() // Trả về role name string thay vì object
         ));
 
         return response;

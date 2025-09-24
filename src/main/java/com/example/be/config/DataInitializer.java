@@ -99,7 +99,7 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("✅ Created role: ADMIN với tất cả permissions");
         }
 
-        // HR - Quản lý user và thực tập sinh
+        // HR - Quản lý user và thực tập sinh - role_id: 2
         if (roleRepository.findByName("HR").isEmpty()) {
             Set<Permission> hrPermissions = Set.of(
                     permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
@@ -124,7 +124,7 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("✅ Created role: HR");
         }
 
-        // MENTOR - Theo dõi thực tập sinh
+        // MENTOR - Theo dõi thực tập sinh - role_id:3
         if (roleRepository.findByName("MENTOR").isEmpty()) {
             Set<Permission> mentorPermissions = Set.of(
                     permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
@@ -144,7 +144,7 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("✅ Created role: MENTOR");
         }
 
-        // INTERN - Chỉ xem thông tin của mình
+        // INTERN - Chỉ xem thông tin của mình - role_id:4
         if (roleRepository.findByName("INTERN").isEmpty()) {
             Set<Permission> internPermissions = Set.of(
                     permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
