@@ -43,7 +43,6 @@ public class AdminController {
             User user = new User();
             user.setFullName(fullName);
             user.setEmail(email);
-            user.setUsername(email);
             user.setPassword(passwordEncoder.encode(password));
             user.setRole(role);
             user.setStatus("ACTIVE");
