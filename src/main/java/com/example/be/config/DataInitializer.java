@@ -185,6 +185,9 @@ public class DataInitializer implements CommandLineRunner {
             if (user.getStatus() == null) {
                 user.setStatus("ACTIVE");
             }
+            if (user.getAuthProvider() == null) {
+                user.setAuthProvider("LOCAL");
+            }
 
             userRepository.save(user);
             System.out.println("✅ Fixed user: " + user.getEmail() + " -> Role: " + roleName);
@@ -208,10 +211,10 @@ public class DataInitializer implements CommandLineRunner {
             Role adminRole = roleRepository.findByName("ADMIN").orElseThrow();
 
             User admin = User.builder()
-                    .fullName("System Administrator")
+                    .fullName("Admin")
                     .email("admin@company.com")
-                    .username("admin@company.com")
                     .password(passwordEncoder.encode("admin123"))
+                    .authProvider("LOCAL")
                     .role(adminRole)
                     .status("ACTIVE")
                     .build();

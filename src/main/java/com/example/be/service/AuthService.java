@@ -27,17 +27,23 @@ public class AuthService {
             if (userRepository.findByEmail(request.getEmail()).isPresent()) {
                 return Map.of("success", false, "message", "Email đã tồn tại!");
             }
-            if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-                return Map.of("success", false, "message", "Username đã tồn tại!");
-            }
 
             // Tạo user mới
             User user = new User();
             user.setEmail(request.getEmail());
-            user.setUsername(request.getUsername());
-            user.setFullName(request.getFullName());
+
+            // ✅ FIX: Đảm bảo fullName không bị NULL
+            String fullName = request.getFullName();
+            if (fullName == null || fullName.trim().isEmpty()) {
+                // Nếu không có fullName, tạo từ email
+                String emailPrefix = request.getEmail().split("@")[0];
+                fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
+            }
+            user.setFullName(fullName);
+
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setStatus("PENDING");
+            user.setAuthProvider("LOCAL"); // ✅ Set authProvider
 
             // Lấy role từ DB, mặc định là INTERN
             String roleName = request.getRole() != null ? request.getRole().toUpperCase() : "INTERN";
@@ -55,9 +61,8 @@ public class AuthService {
                     "id", savedUser.getId(),
                     "fullName", savedUser.getFullName(),
                     "email", savedUser.getEmail(),
-                    "username", savedUser.getUsername(),
                     "status", savedUser.getStatus(),
-                    "role", savedUser.getRole().getName() // Trả về role name string
+                    "role", savedUser.getRole().getName()
             ));
 
             return response;
@@ -78,7 +83,7 @@ public class AuthService {
                     if (!"ACTIVE".equals(user.getStatus())) {
                         return "Tài khoản chưa được duyệt!";
                     }
-                    return "Đăng nhập thành công! Xin chào " + user.getUsername()
+                    return "Đăng nhập thành công! Xin chào " + user.getEmail() // Sử dụng email thay vì username
                             + " (Role: " + user.getRole().getName() + ")";
                 })
                 .orElse("Sai email hoặc mật khẩu!");
@@ -115,7 +120,6 @@ public class AuthService {
                 "id", user.getId(),
                 "fullName", user.getFullName(),
                 "email", user.getEmail(),
-                "username", user.getUsername(),
                 "status", user.getStatus(),
                 "role", user.getRole().getName() // Trả về role name string thay vì object
         ));
