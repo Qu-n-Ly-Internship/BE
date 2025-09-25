@@ -37,6 +37,12 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(Map.of("message", "Email đã tồn tại!"));
             }
 
+            // ✅ FIX: Đảm bảo fullName không bị NULL
+            if (fullName == null || fullName.trim().isEmpty()) {
+                String emailPrefix = email.split("@")[0];
+                fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
+            }
+
             Role role = roleRepository.findByName(roleName)
                     .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
 
@@ -46,6 +52,7 @@ public class AdminController {
             user.setPassword(passwordEncoder.encode(password));
             user.setRole(role);
             user.setStatus("ACTIVE");
+            user.setAuthProvider("LOCAL"); // ✅ Set authProvider
 
             User savedUser = userRepository.save(user);
 

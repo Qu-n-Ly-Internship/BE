@@ -28,17 +28,22 @@ public class AuthService {
                 return Map.of("success", false, "message", "Email đã tồn tại!");
             }
 
-            // XÓA HOÀN TOÀN đoạn check username này:
-            // if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            //     return Map.of("success", false, "message", "Username đã tồn tại!");
-            // }
-
             // Tạo user mới
             User user = new User();
             user.setEmail(request.getEmail());
-            user.setFullName(request.getFullName());
+
+            // ✅ FIX: Đảm bảo fullName không bị NULL
+            String fullName = request.getFullName();
+            if (fullName == null || fullName.trim().isEmpty()) {
+                // Nếu không có fullName, tạo từ email
+                String emailPrefix = request.getEmail().split("@")[0];
+                fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
+            }
+            user.setFullName(fullName);
+
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setStatus("PENDING");
+            user.setAuthProvider("LOCAL"); // ✅ Set authProvider
 
             // Lấy role từ DB, mặc định là INTERN
             String roleName = request.getRole() != null ? request.getRole().toUpperCase() : "INTERN";
@@ -57,7 +62,7 @@ public class AuthService {
                     "fullName", savedUser.getFullName(),
                     "email", savedUser.getEmail(),
                     "status", savedUser.getStatus(),
-                    "role", savedUser.getRole().getName() // Trả về role name string
+                    "role", savedUser.getRole().getName()
             ));
 
             return response;
