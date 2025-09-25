@@ -16,8 +16,8 @@ public class Permission {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String name; // READ_USERS, CREATE_USERS, UPDATE_USERS, DELETE_USERS, etc.
+    private String name;
 
     private String description;
-    private String module; // USER_MANAGEMENT, INTERNSHIP_MANAGEMENT, etc.
+    private String module;
 }

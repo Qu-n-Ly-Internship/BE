@@ -28,7 +28,6 @@ public class User {
 
     private String fullName;
 
-    // Thay đổi từ String sang Entity
     @ManyToOne
     @JoinColumn(name = "role_id")
     private Role role;
