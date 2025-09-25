@@ -110,8 +110,6 @@ public class DataInitializer implements CommandLineRunner {
                     permissionRepository.findByName("CREATE_STUDENT").orElseThrow(),
                     permissionRepository.findByName("EDIT_STUDENT").orElseThrow(),
                     permissionRepository.findByName("VIEW_COMPANIES").orElseThrow(),
-                    permissionRepository.findByName("CREATE_COMPANY").orElseThrow(),
-                    permissionRepository.findByName("EDIT_COMPANY").orElseThrow(),
                     permissionRepository.findByName("MANAGE_USERS").orElseThrow(),
                     permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
             );
@@ -132,7 +130,6 @@ public class DataInitializer implements CommandLineRunner {
                     permissionRepository.findByName("EDIT_INTERNSHIP").orElseThrow(),
                     permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
                     permissionRepository.findByName("EDIT_STUDENT").orElseThrow(),
-                    permissionRepository.findByName("VIEW_COMPANIES").orElseThrow(),
                     permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
             );
             Role mentorRole = Role.builder()
@@ -149,8 +146,7 @@ public class DataInitializer implements CommandLineRunner {
             Set<Permission> internPermissions = Set.of(
                     permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
                     permissionRepository.findByName("VIEW_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
-                    permissionRepository.findByName("VIEW_COMPANIES").orElseThrow()
+                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow()
             );
             Role internRole = Role.builder()
                     .name("INTERN")
