@@ -1,5 +1,6 @@
 package com.example.be.service;
 
+import com.example.be.config.JwtUtil;
 import com.example.be.dto.LoginRequest;
 import com.example.be.dto.RegisterRequest;
 import com.example.be.entity.Role;
@@ -20,6 +21,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final JwtUtil jwtUtil;
 
     // ==================== REGISTER ====================
     public Map<String, Object> register(RegisterRequest request) {
@@ -123,6 +125,8 @@ public class AuthService {
                 "status", user.getStatus(),
                 "role", user.getRole().getName() // Trả về role name string thay vì object
         ));
+        String token = jwtUtil.generateToken(request.getEmail(), user.getRole().getName());
+        response.put("token", token);
 
         return response;
     }

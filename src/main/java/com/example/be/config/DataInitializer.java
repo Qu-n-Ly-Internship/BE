@@ -58,11 +58,7 @@ public class DataInitializer implements CommandLineRunner {
                 {"EDIT_STUDENT", "Chỉnh sửa sinh viên", "STUDENT_MANAGEMENT"},
                 {"DELETE_STUDENT", "Xóa sinh viên", "STUDENT_MANAGEMENT"},
 
-                // Company Management
-                {"VIEW_COMPANIES", "Xem danh sách công ty", "COMPANY_MANAGEMENT"},
-                {"CREATE_COMPANY", "Thêm công ty mới", "COMPANY_MANAGEMENT"},
-                {"EDIT_COMPANY", "Chỉnh sửa công ty", "COMPANY_MANAGEMENT"},
-                {"DELETE_COMPANY", "Xóa công ty", "COMPANY_MANAGEMENT"},
+
 
                 // User Management
                 {"MANAGE_USERS", "Quản lý người dùng", "USER_MANAGEMENT"},
