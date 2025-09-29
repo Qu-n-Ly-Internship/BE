@@ -30,7 +30,7 @@ public class DocumentController {
                        i.intern_id, i.fullname as intern_name, i.phone,
                        u.name_uni as university_name
                 FROM intern_documents d
-                JOIN intern_profiles i ON d.intern_id = i.intern_id
+                LEFT JOIN intern_profiles i ON d.intern_id = i.intern_id
                 LEFT JOIN universities u ON i.uni_id = u.uni_id
                 WHERE 1=1
                 """;
@@ -62,6 +62,40 @@ public class DocumentController {
         }
     }
 
+    // 10. Lấy tài liệu của chính người dùng dựa vào uploaderEmail (không cần schema change)
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
+        try {
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Thiếu tham số email"
+                ));
+            }
+
+            String sql = """
+                SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail, d.rejection_reason
+                FROM intern_documents d
+                WHERE d.file_detail LIKE ?
+                ORDER BY d.uploaded_at DESC
+                """;
+
+            List<Map<String, Object>> documents = jdbcTemplate.queryForList(sql, "%uploadedBy=" + email + "%");
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", documents,
+                    "total", documents.size()
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi khi lấy tài liệu của bạn: " + e.getMessage()
+            ));
+        }
+    }
+
     // 2. Lấy tài liệu chờ duyệt
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingDocuments() {
@@ -71,7 +105,7 @@ public class DocumentController {
                        i.intern_id, i.fullname as intern_name, i.phone,
                        u.name_uni as university_name
                 FROM intern_documents d
-                JOIN intern_profiles i ON d.intern_id = i.intern_id
+                LEFT JOIN intern_profiles i ON d.intern_id = i.intern_id
                 LEFT JOIN universities u ON i.uni_id = u.uni_id
                 WHERE d.status = 'PENDING'
                 ORDER BY d.uploaded_at ASC
@@ -195,7 +229,8 @@ public class DocumentController {
     public ResponseEntity<?> uploadDocument(
             @RequestParam("type") String documentType,
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-            @RequestParam(value = "internId", required = false) Long internId
+            @RequestParam(value = "internId", required = false) Long internId,
+            @RequestParam(value = "uploaderEmail", required = false) String uploaderEmail
     ) {
         try {
             // Validate file
@@ -229,6 +264,9 @@ public class DocumentController {
             // TODO: Save file to storage (local/cloud)
             String fileName = file.getOriginalFilename();
             String fileDetail = String.format("%s (%.2f KB)", fileName, file.getSize() / 1024.0);
+            if (uploaderEmail != null && !uploaderEmail.isBlank()) {
+                fileDetail = fileDetail + " | uploadedBy=" + uploaderEmail.trim();
+            }
 
             // Insert vào database
             String insertSql = """
@@ -353,7 +391,7 @@ public class DocumentController {
     ) {
         try {
             String action = request.get("action"); // "APPROVE" hoặc "REJECT"
-            String note = request.get("note"); // Lý do từ chối (nếu có)
+            String note = request.get("note"); // Ghi chú (tùy chọn)
 
             if (action == null || (!action.equals("APPROVE") && !action.equals("REJECT"))) {
                 return ResponseEntity.badRequest().body(Map.of(
@@ -374,21 +412,23 @@ public class DocumentController {
             }
 
             if (action.equals("APPROVE")) {
-                // Duyệt
+                // Lưu ghi chú duyệt (nếu có) vào cột rejection_reason như review_note
                 String updateSql = """
                     UPDATE intern_documents 
                     SET status = 'APPROVED',
+                        rejection_reason = COALESCE(?, rejection_reason),
                         reviewed_at = NOW()
                     WHERE document_id = ?
                     """;
-                jdbcTemplate.update(updateSql, id);
+                jdbcTemplate.update(updateSql, note != null && !note.trim().isEmpty() ? note.trim() : null, id);
 
                 return ResponseEntity.ok(Map.of(
                         "success", true,
-                        "message", "Tài liệu đã được duyệt!"
+                        "message", "Tài liệu đã được duyệt!",
+                        "note", note != null ? note.trim() : ""
                 ));
             } else {
-                // Từ chối
+                // REJECT: bắt buộc phải có lý do
                 if (note == null || note.trim().isEmpty()) {
                     return ResponseEntity.badRequest().body(Map.of(
                             "success", false,

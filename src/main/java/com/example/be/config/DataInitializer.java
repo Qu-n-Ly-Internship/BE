@@ -152,6 +152,19 @@ public class DataInitializer implements CommandLineRunner {
             roleRepository.save(internRole);
             System.out.println("✅ Created role: INTERN");
         }
+
+        // USER - Tài khoản mới đăng ký, chờ duyệt - role_id:5
+        if (roleRepository.findByName("USER").isEmpty()) {
+            // Người dùng mới không có quyền quản trị trước khi được duyệt
+            Set<Permission> userPermissions = Set.of();
+            Role userRole = Role.builder()
+                    .name("USER")
+                    .description("Người dùng mới đăng ký, chờ duyệt")
+                    .permissions(userPermissions)
+                    .build();
+            roleRepository.save(userRole);
+            System.out.println("✅ Created role: USER");
+        }
     }
 
     // 🔧 FIX: Sửa users có role = NULL
@@ -194,7 +207,7 @@ public class DataInitializer implements CommandLineRunner {
         } else if (email.toLowerCase().contains("mentor")) {
             return "MENTOR";
         } else {
-            return "INTERN";  // Default
+            return "USER";  // Default to USER
         }
     }
 

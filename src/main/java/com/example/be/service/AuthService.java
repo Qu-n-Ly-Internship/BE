@@ -42,13 +42,12 @@ public class AuthService {
                 fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
             }
             user.setFullName(fullName);
-
             user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setStatus("PENDING");
-            user.setAuthProvider("LOCAL"); // ✅ Set authProvider
+            user.setStatus("ACTIVE");
+            user.setAuthProvider("LOCAL"); // Set authProvider
 
-            // Lấy role từ DB, mặc định là INTERN
-            String roleName = request.getRole() != null ? request.getRole().toUpperCase() : "INTERN";
+            // Lấy role từ DB, luôn mặc định là USER khi đăng ký (tránh leo quyền từ client)
+            String roleName = "USER";
             Role role = roleRepository.findByName(roleName)
                     .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
             user.setRole(role);
