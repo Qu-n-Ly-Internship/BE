@@ -348,7 +348,7 @@ public class DocumentController {
                 ));
             }
 
-
+            // Check document exists
             String checkSql = "SELECT COUNT(*) FROM intern_documents WHERE document_id = ?";
             int count = jdbcTemplate.queryForObject(checkSql, Integer.class, id);
 
