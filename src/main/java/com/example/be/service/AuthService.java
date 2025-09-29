@@ -1,5 +1,6 @@
 package com.example.be.service;
 
+import com.example.be.config.JwtUtil;
 import com.example.be.dto.LoginRequest;
 import com.example.be.dto.RegisterRequest;
 import com.example.be.entity.Role;
@@ -20,6 +21,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final JwtUtil jwtUtil;
 
     // ==================== REGISTER ====================
     public Map<String, Object> register(RegisterRequest request) {
@@ -40,13 +42,12 @@ public class AuthService {
                 fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
             }
             user.setFullName(fullName);
-
             user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setStatus("PENDING");
-            user.setAuthProvider("LOCAL"); // ✅ Set authProvider
+            user.setStatus("ACTIVE");
+            user.setAuthProvider("LOCAL"); // Set authProvider
 
-            // Lấy role từ DB, mặc định là INTERN
-            String roleName = request.getRole() != null ? request.getRole().toUpperCase() : "INTERN";
+            // Lấy role từ DB, luôn mặc định là USER khi đăng ký (tránh leo quyền từ client)
+            String roleName = "USER";
             Role role = roleRepository.findByName(roleName)
                     .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
             user.setRole(role);
@@ -123,6 +124,8 @@ public class AuthService {
                 "status", user.getStatus(),
                 "role", user.getRole().getName() // Trả về role name string thay vì object
         ));
+        String token = jwtUtil.generateToken(request.getEmail(), user.getRole().getName());
+        response.put("token", token);
 
         return response;
     }

@@ -58,11 +58,7 @@ public class DataInitializer implements CommandLineRunner {
                 {"EDIT_STUDENT", "Chỉnh sửa sinh viên", "STUDENT_MANAGEMENT"},
                 {"DELETE_STUDENT", "Xóa sinh viên", "STUDENT_MANAGEMENT"},
 
-                // Company Management
-                {"VIEW_COMPANIES", "Xem danh sách công ty", "COMPANY_MANAGEMENT"},
-                {"CREATE_COMPANY", "Thêm công ty mới", "COMPANY_MANAGEMENT"},
-                {"EDIT_COMPANY", "Chỉnh sửa công ty", "COMPANY_MANAGEMENT"},
-                {"DELETE_COMPANY", "Xóa công ty", "COMPANY_MANAGEMENT"},
+
 
                 // User Management
                 {"MANAGE_USERS", "Quản lý người dùng", "USER_MANAGEMENT"},
@@ -110,8 +106,6 @@ public class DataInitializer implements CommandLineRunner {
                     permissionRepository.findByName("CREATE_STUDENT").orElseThrow(),
                     permissionRepository.findByName("EDIT_STUDENT").orElseThrow(),
                     permissionRepository.findByName("VIEW_COMPANIES").orElseThrow(),
-                    permissionRepository.findByName("CREATE_COMPANY").orElseThrow(),
-                    permissionRepository.findByName("EDIT_COMPANY").orElseThrow(),
                     permissionRepository.findByName("MANAGE_USERS").orElseThrow(),
                     permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
             );
@@ -132,7 +126,6 @@ public class DataInitializer implements CommandLineRunner {
                     permissionRepository.findByName("EDIT_INTERNSHIP").orElseThrow(),
                     permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
                     permissionRepository.findByName("EDIT_STUDENT").orElseThrow(),
-                    permissionRepository.findByName("VIEW_COMPANIES").orElseThrow(),
                     permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
             );
             Role mentorRole = Role.builder()
@@ -149,8 +142,7 @@ public class DataInitializer implements CommandLineRunner {
             Set<Permission> internPermissions = Set.of(
                     permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
                     permissionRepository.findByName("VIEW_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
-                    permissionRepository.findByName("VIEW_COMPANIES").orElseThrow()
+                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow()
             );
             Role internRole = Role.builder()
                     .name("INTERN")
@@ -159,6 +151,19 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             roleRepository.save(internRole);
             System.out.println("✅ Created role: INTERN");
+        }
+
+        // USER - Tài khoản mới đăng ký, chờ duyệt - role_id:5
+        if (roleRepository.findByName("USER").isEmpty()) {
+            // Người dùng mới không có quyền quản trị trước khi được duyệt
+            Set<Permission> userPermissions = Set.of();
+            Role userRole = Role.builder()
+                    .name("USER")
+                    .description("Người dùng mới đăng ký, chờ duyệt")
+                    .permissions(userPermissions)
+                    .build();
+            roleRepository.save(userRole);
+            System.out.println("✅ Created role: USER");
         }
     }
 
@@ -202,7 +207,7 @@ public class DataInitializer implements CommandLineRunner {
         } else if (email.toLowerCase().contains("mentor")) {
             return "MENTOR";
         } else {
-            return "INTERN";  // Default
+            return "USER";  // Default to USER
         }
     }
 
