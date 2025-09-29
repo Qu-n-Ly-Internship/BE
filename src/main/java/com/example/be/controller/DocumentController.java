@@ -295,7 +295,7 @@ public class DocumentController {
         }
     }
 
-    // 7. Duyệt tài liệu
+    // 7. Duyệt tài liệu...
     @PutMapping("/{id}/approve")
     public ResponseEntity<?> approveDocument(@PathVariable Long id) {
         try {
