@@ -43,7 +43,7 @@ public class AuthService {
             }
             user.setFullName(fullName);
             user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setStatus("ACTIVE"); 
+            user.setStatus("ACTIVE"); //
             user.setAuthProvider("LOCAL"); // Set authProvider
 
             // Lấy role từ DB, luôn mặc định là USER khi đăng ký (tránh leo quyền từ client)
