@@ -80,14 +80,26 @@ public class DocumentController {
                 ORDER BY d.uploaded_at DESC
                 """;
 
-            List<Map<String, Object>> documents = jdbcTemplate.queryForList(sql, "%uploadedBy=" + email + "%");
+            List<Map<String, Object>> documents;
+            try {
+                // Try query including rejection_reason (preferred schema)
+                documents = jdbcTemplate.queryForList(sql, "%uploadedBy=" + email + "%");
+            } catch (Exception ex) {
+                // Fallback for schemas without rejection_reason column
+                String fallbackSql = """
+                    SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail
+                    FROM intern_documents d
+                    WHERE d.file_detail LIKE ?
+                    ORDER BY d.uploaded_at DESC
+                    """;
+                documents = jdbcTemplate.queryForList(fallbackSql, "%uploadedBy=" + email + "%");
+            }
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "data", documents,
                     "total", documents.size()
             ));
-
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
