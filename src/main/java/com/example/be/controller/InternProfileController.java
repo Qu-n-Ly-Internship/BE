@@ -404,27 +404,47 @@ public class InternProfileController {
 
     private String getMajorName(Object majorId) {
         if (majorId == null) return "";
-        int id = (Integer) majorId;
-        return switch (id) {
-            case 1 -> "Công nghệ thông tin";
-            case 2 -> "Khoa học máy tính";
-            case 3 -> "Kỹ thuật điện tử";
-            case 4 -> "Kỹ thuật phần mềm";
-            case 5 -> "An toàn thông tin";
-            default -> "Chuyên ngành khác";
-        };
+
+        try {
+            int id = (Integer) majorId;
+            String sql = "SELECT name_major FROM majors WHERE major_id = ?";
+            List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, id);
+            
+            if (!result.isEmpty()) {
+                return (String) result.get(0).get("name_major");
+            }
+            return "";
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private Integer getMajorId(String majorName) {
         if (majorName == null || majorName.trim().isEmpty()) return null;
 
-        return switch (majorName.trim()) {
-            case "Công nghệ thông tin" -> 1;
-            case "Khoa học máy tính" -> 2;
-            case "Kỹ thuật điện tử" -> 3;
-            case "Kỹ thuật phần mềm" -> 4;
-            case "An toàn thông tin" -> 5;
-            default -> 1; // Default
-        };
+        try {
+            // Tìm ngành trong database
+            String findSql = "SELECT major_id FROM majors WHERE name_major = ?";
+            List<Map<String, Object>> result = jdbcTemplate.queryForList(findSql, majorName.trim());
+
+            if (!result.isEmpty()) {
+                // Ngành đã tồn tại, trả về ID
+                return (Integer) result.get(0).get("major_id");
+            } else {
+                // Ngành chưa tồn tại, tạo mới
+                KeyHolder keyHolder = new GeneratedKeyHolder();
+                jdbcTemplate.update(connection -> {
+                    PreparedStatement ps = connection.prepareStatement(
+                            "INSERT INTO majors (name_major) VALUES (?)",
+                            Statement.RETURN_GENERATED_KEYS
+                    );
+                    ps.setString(1, majorName.trim());
+                    return ps;
+                }, keyHolder);
+                return keyHolder.getKey().intValue();
+            }
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
