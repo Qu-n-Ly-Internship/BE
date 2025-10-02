@@ -4,9 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -306,6 +305,7 @@ public class InternController {
             ));
         }
     }
+
     private int getTotalInternCount(String query, String university, String major, String program, Integer yearOfStudy) {
         StringBuilder countSql = new StringBuilder("""
             SELECT COUNT(DISTINCT i.intern_id)

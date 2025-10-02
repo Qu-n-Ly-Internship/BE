@@ -177,4 +177,32 @@ public class AdminController {
             return ResponseEntity.badRequest().body(Map.of("message", "Khóa thất bại: " + e.getMessage()));
         }
     }
+
+    // Reset user về role USER và status PENDING (dùng khi user bị gán sai role)
+    @PutMapping("/reset/{id}")
+    public ResponseEntity<?> resetUserToDefault(@PathVariable Long id) {
+        try {
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
+            
+            // Reset về role USER
+            Role userRole = roleRepository.findByName("USER")
+                    .orElseThrow(() -> new RuntimeException("Role USER không tồn tại!"));
+            user.setRole(userRole);
+            user.setStatus("PENDING");
+            
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of(
+                "message", "Đã reset user " + user.getEmail() + " về role USER và status PENDING!",
+                "user", Map.of(
+                    "id", user.getId(),
+                    "email", user.getEmail(),
+                    "role", user.getRole().getName(),
+                    "status", user.getStatus()
+                )
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Reset thất bại: " + e.getMessage()));
+        }
+    }
 }

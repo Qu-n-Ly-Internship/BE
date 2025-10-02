@@ -43,7 +43,7 @@ public class AuthService {
             }
             user.setFullName(fullName);
             user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setStatus("ACTIVE");
+            user.setStatus("ACTIVE"); //
             user.setAuthProvider("LOCAL"); // Set authProvider
 
             // Lấy role từ DB, luôn mặc định là USER khi đăng ký (tránh leo quyền từ client)
@@ -51,13 +51,21 @@ public class AuthService {
             Role role = roleRepository.findByName(roleName)
                     .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
             user.setRole(role);
+            
+            System.out.println("🔍 DEBUG Register - Email: " + user.getEmail() + 
+                             " | Role: " + role.getName() + 
+                             " (ID: " + role.getId() + ") | Status: " + user.getStatus());
 
             User savedUser = userRepository.save(user);
+            
+            System.out.println("✅ User saved - ID: " + savedUser.getId() + 
+                             " | Role: " + savedUser.getRole().getName() + 
+                             " | Status: " + savedUser.getStatus());
 
             // Trả về format đồng nhất với login
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Đăng ký thành công!");
+            response.put("message", "Đăng ký thành công! Tài khoản của bạn đang chờ admin duyệt. Bạn sẽ nhận được thông báo khi tài khoản được kích hoạt.");
             response.put("user", Map.of(
                     "id", savedUser.getId(),
                     "fullName", savedUser.getFullName(),
@@ -111,7 +119,11 @@ public class AuthService {
 
         if (!"ACTIVE".equals(user.getStatus())) {
             response.put("success", false);
-            response.put("message", "Tài khoản chưa được kích hoạt hoặc đã bị khóa!");
+            if ("PENDING".equals(user.getStatus())) {
+                response.put("message", "Tài khoản đang chờ admin duyệt. Vui lòng liên hệ admin để được kích hoạt!");
+            } else {
+                response.put("message", "Tài khoản đã bị khóa hoặc vô hiệu hóa!");
+            }
             return response;
         }
 

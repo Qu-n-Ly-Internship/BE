@@ -162,7 +162,10 @@ public class DataInitializer implements CommandLineRunner {
                     .permissions(userPermissions)
                     .build();
             roleRepository.save(userRole);
-            System.out.println("✅ Created role: USER");
+            System.out.println("✅ Created role: USER (role_id: " + userRole.getId() + ")");
+        } else {
+            Role existingUser = roleRepository.findByName("USER").get();
+            System.out.println("✅ Role USER already exists (role_id: " + existingUser.getId() + ")");
         }
     }
 
@@ -199,14 +202,16 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private String determineRoleFromEmail(String email) {
-        if (email.toLowerCase().contains("admin")) {
+        String emailLower = email.toLowerCase();
+        // Chỉ match chính xác "admin@" ở đầu hoặc có dấu phân cách rõ ràng
+        if (emailLower.equals("admin@company.com") || emailLower.startsWith("admin@")) {
             return "ADMIN";
-        } else if (email.toLowerCase().contains("hr")) {
+        } else if (emailLower.startsWith("hr@") || emailLower.contains("hr.")) {
             return "HR";
-        } else if (email.toLowerCase().contains("mentor")) {
+        } else if (emailLower.startsWith("mentor@") || emailLower.contains("mentor.")) {
             return "MENTOR";
         } else {
-            return "USER";  // Default to USER
+            return "USER";  // Default to USER - không tự động gán ADMIN
         }
     }
 
