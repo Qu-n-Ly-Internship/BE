@@ -1,4 +1,3 @@
-// Cập nhật DataInitializer.java để tạo roles và permissions mặc định
 package com.example.be.config;
 
 import com.example.be.entity.Permission;
@@ -37,20 +36,20 @@ public class DataInitializer implements CommandLineRunner {
 
     private void createPermissionsIfNotExist() {
         String[][] permissions = {
-                {"READ_USERS", "Xem danh sách users", "USER_MANAGEMENT"},
-                {"CREATE_USERS", "Tạo user mới", "USER_MANAGEMENT"},
-                {"UPDATE_USERS", "Cập nhật thông tin user", "USER_MANAGEMENT"},
-                {"DELETE_USERS", "Xóa user", "USER_MANAGEMENT"},
-                {"MANAGE_ROLES", "Quản lý vai trò", "USER_MANAGEMENT"},
-                {"MANAGE_PERMISSIONS", "Quản lý quyền", "USER_MANAGEMENT"},
+                { "READ_USERS", "Xem danh sách users", "USER_MANAGEMENT" },
+                { "CREATE_USERS", "Tạo user mới", "USER_MANAGEMENT" },
+                { "UPDATE_USERS", "Cập nhật thông tin user", "USER_MANAGEMENT" },
+                { "DELETE_USERS", "Xóa user", "USER_MANAGEMENT" },
+                { "MANAGE_ROLES", "Quản lý vai trò", "USER_MANAGEMENT" },
+                { "MANAGE_PERMISSIONS", "Quản lý quyền", "USER_MANAGEMENT" },
 
-                {"READ_INTERNSHIPS", "Xem thông tin thực tập", "INTERNSHIP_MANAGEMENT"},
-                {"CREATE_INTERNSHIPS", "Tạo chương trình thực tập", "INTERNSHIP_MANAGEMENT"},
-                {"UPDATE_INTERNSHIPS", "Cập nhật thông tin thực tập", "INTERNSHIP_MANAGEMENT"},
-                {"APPROVE_INTERNSHIPS", "Duyệt thực tập sinh", "INTERNSHIP_MANAGEMENT"},
+                { "READ_INTERNSHIPS", "Xem thông tin thực tập", "INTERNSHIP_MANAGEMENT" },
+                { "CREATE_INTERNSHIPS", "Tạo chương trình thực tập", "INTERNSHIP_MANAGEMENT" },
+                { "UPDATE_INTERNSHIPS", "Cập nhật thông tin thực tập", "INTERNSHIP_MANAGEMENT" },
+                { "APPROVE_INTERNSHIPS", "Duyệt thực tập sinh", "INTERNSHIP_MANAGEMENT" },
 
-                {"VIEW_REPORTS", "Xem báo cáo", "REPORTING"},
-                {"EXPORT_DATA", "Xuất dữ liệu", "REPORTING"}
+                { "VIEW_REPORTS", "Xem báo cáo", "REPORTING" },
+                { "EXPORT_DATA", "Xuất dữ liệu", "REPORTING" }
         };
 
         for (String[] perm : permissions) {
@@ -87,8 +86,7 @@ public class DataInitializer implements CommandLineRunner {
                     permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow(),
                     permissionRepository.findByName("CREATE_INTERNSHIPS").orElseThrow(),
                     permissionRepository.findByName("APPROVE_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
-            );
+                    permissionRepository.findByName("VIEW_REPORTS").orElseThrow());
             Role hrRole = Role.builder()
                     .name("HR")
                     .description("Nhân viên nhân sự")
@@ -104,8 +102,7 @@ public class DataInitializer implements CommandLineRunner {
                     permissionRepository.findByName("READ_USERS").orElseThrow(),
                     permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow(),
                     permissionRepository.findByName("UPDATE_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
-            );
+                    permissionRepository.findByName("VIEW_REPORTS").orElseThrow());
             Role mentorRole = Role.builder()
                     .name("MENTOR")
                     .description("Người hướng dẫn")
@@ -118,8 +115,7 @@ public class DataInitializer implements CommandLineRunner {
         // INTERN - Chỉ xem thông tin của mình
         if (roleRepository.findByName("INTERN").isEmpty()) {
             Set<Permission> internPermissions = Set.of(
-                    permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow()
-            );
+                    permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow());
             Role internRole = Role.builder()
                     .name("INTERN")
                     .description("Thực tập sinh")

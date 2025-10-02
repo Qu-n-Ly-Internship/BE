@@ -1,17 +1,21 @@
 package com.example.be.service;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import com.example.be.dto.LoginRequest;
 import com.example.be.dto.RegisterRequest;
 import com.example.be.entity.Role;
 import com.example.be.entity.User;
 import com.example.be.repository.RoleRepository;
 import com.example.be.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +24,10 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
 
     // ==================== REGISTER ====================
     public String register(RegisterRequest request) {
@@ -98,9 +106,44 @@ public class AuthService {
                 "fullName", user.getFullName(),
                 "email", user.getEmail(),
                 "role", user.getRole().getName(),
-                "status", user.getStatus()
-        ));
+                "status", user.getStatus()));
 
         return response;
     }
+
+    public User processOAuthPostLogin(org.springframework.security.oauth2.core.user.OAuth2User oAuth2User) {
+        String email = (String) oAuth2User.getAttribute("email");
+        String name = (String) oAuth2User.getAttribute("name");
+        String sub = (String) oAuth2User.getAttribute("sub"); // unique id từ Google
+
+        return userRepository.findByEmail(email)
+                .map(user -> {
+                    // Update thông tin cơ bản khi login lại bằng Google
+                    user.setFullName(name);
+                    user.setStatus("ACTIVE");
+                    user.setAuth_provider("GOOGLE"); // đảm bảo ghi lại provider
+                    return userRepository.save(user);
+                })
+                .orElseGet(() -> {
+                    // Tạo mới user nếu chưa tồn tại
+                    Role role = roleRepository.findByName("INTERN")
+                            .orElseThrow(() -> new RuntimeException("Role mặc định không tồn tại"));
+
+                    // Sinh dummy password (không dùng, nhưng bắt buộc để pass constraint)
+                    String dummyPassword = passwordEncoder.encode(UUID.randomUUID().toString());
+
+                    User newUser = User.builder()
+                            .email(email)
+                            .username("google_" + sub) // tránh trùng username
+                            .fullName(name)
+                            .password(dummyPassword)
+                            .role(role)
+                            .auth_provider("GOOGLE") // ✅ chỉ set khi login bằng Google
+                            .status("ACTIVE")
+                            .build();
+
+                    return userRepository.save(newUser);
+                });
+    }
+
 }
