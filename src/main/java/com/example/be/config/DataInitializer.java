@@ -105,7 +105,6 @@ public class DataInitializer implements CommandLineRunner {
                     permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
                     permissionRepository.findByName("CREATE_STUDENT").orElseThrow(),
                     permissionRepository.findByName("EDIT_STUDENT").orElseThrow(),
-                    permissionRepository.findByName("VIEW_COMPANIES").orElseThrow(),
                     permissionRepository.findByName("MANAGE_USERS").orElseThrow(),
                     permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
             );
