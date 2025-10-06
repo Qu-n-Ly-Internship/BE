@@ -47,7 +47,7 @@ public class User {
 
     // Thay đổi từ String sang Entity
     @ManyToOne
-    @JoinColumn(name = "id")
+    @JoinColumn(name = "role_id")
     private Role role;
 
     private String status;
