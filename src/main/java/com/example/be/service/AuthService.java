@@ -135,12 +135,19 @@ public class AuthService {
 
         response.put("success", true);
         response.put("message", "Đăng nhập thành công!");
+        var permissions = user.getRole()
+                .getPermissions()
+                .stream()
+                .map(p -> p.getName())
+                .toList();
         response.put("user", Map.of(
                 "id", user.getId(),
                 "fullName", user.getFullName(),
                 "email", user.getEmail(),
+                "status", user.getStatus(),
                 "role", user.getRole().getName(),
-                "status", user.getStatus()));
+                "permissions", permissions));
+
         String token = jwtUtil.generateToken(request.getEmail(), user.getRole().getName());
         response.put("token", token);
         return response;
