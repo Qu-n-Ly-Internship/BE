@@ -135,14 +135,23 @@ public class AuthService {
 
         response.put("success", true);
         response.put("message", "Đăng nhập thành công!");
+        // Trả về thông tin user + permissions
+        var permissions = user.getRole()
+                .getPermissions()
+                .stream()
+                .map(p -> p.getName())
+                .toList();
         response.put("user", Map.of(
                 "id", user.getId(),
                 "fullName", user.getFullName(),
                 "email", user.getEmail(),
+                "status", user.getStatus(),
                 "role", user.getRole().getName(),
-                "status", user.getStatus()));
+                "permissions", permissions));
+
         String token = jwtUtil.generateToken(request.getEmail(), user.getRole().getName());
         response.put("token", token);
+        
         return response;
     }
 
@@ -161,7 +170,7 @@ public class AuthService {
                 })
                 .orElseGet(() -> {
                     // Tạo mới user nếu chưa tồn tại
-                    Role role = roleRepository.findByName("INTERN")
+                    Role role = roleRepository.findByName("USER")
                             .orElseThrow(() -> new RuntimeException("Role mặc định không tồn tại"));
 
                     // Sinh dummy password (không dùng, nhưng bắt buộc để pass constraint)
