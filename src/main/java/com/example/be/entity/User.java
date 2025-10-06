@@ -1,6 +1,8 @@
 package com.example.be.entity;
 
 import java.util.Set;
+import jakarta.persistence.*;
+import lombok.*;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -40,19 +42,16 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = true)
-    private String auth_provider;
-
+    @Column(name = "fullname")
     private String fullName;
-
-    // Thay đổi từ String sang Entity
-    @ManyToOne
-    @JoinColumn(name = "role_id")
-    private Role role;
 
     private String status;
 
-    // Quyền riêng cho user này
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private Set<UserPermission> userPermissions;
+    @Column(name = "auth_provider")
+    private String authProvider;
+
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    private Role role;
 }
+

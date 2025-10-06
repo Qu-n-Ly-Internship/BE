@@ -4,21 +4,18 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "permissions")
+@Table(name = "universities")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Permission {
+public class University {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "permission_id")
+    @Column(name = "uni_id")
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "name_uni")
     private String name;
-
-    private String description;
-    private String module;
 }

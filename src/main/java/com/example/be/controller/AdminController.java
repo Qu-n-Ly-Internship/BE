@@ -37,16 +37,22 @@ public class AdminController {
                 return ResponseEntity.badRequest().body(Map.of("message", "Email đã tồn tại!"));
             }
 
+            // ✅ FIX: Đảm bảo fullName không bị NULL
+            if (fullName == null || fullName.trim().isEmpty()) {
+                String emailPrefix = email.split("@")[0];
+                fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
+            }
+
             Role role = roleRepository.findByName(roleName)
                     .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
 
             User user = new User();
             user.setFullName(fullName);
             user.setEmail(email);
-            user.setUsername(email);
             user.setPassword(passwordEncoder.encode(password));
             user.setRole(role);
             user.setStatus("ACTIVE");
+            user.setAuthProvider("LOCAL"); // ✅ Set authProvider
 
             User savedUser = userRepository.save(user);
 
@@ -169,6 +175,34 @@ public class AdminController {
             return ResponseEntity.ok(Map.of("message", "User " + user.getEmail() + " đã bị khóa!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", "Khóa thất bại: " + e.getMessage()));
+        }
+    }
+
+    // Reset user về role USER và status PENDING (dùng khi user bị gán sai role)
+    @PutMapping("/reset/{id}")
+    public ResponseEntity<?> resetUserToDefault(@PathVariable Long id) {
+        try {
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
+            
+            // Reset về role USER
+            Role userRole = roleRepository.findByName("USER")
+                    .orElseThrow(() -> new RuntimeException("Role USER không tồn tại!"));
+            user.setRole(userRole);
+            user.setStatus("PENDING");
+            
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of(
+                "message", "Đã reset user " + user.getEmail() + " về role USER và status PENDING!",
+                "user", Map.of(
+                    "id", user.getId(),
+                    "email", user.getEmail(),
+                    "role", user.getRole().getName(),
+                    "status", user.getStatus()
+                )
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Reset thất bại: " + e.getMessage()));
         }
     }
 }

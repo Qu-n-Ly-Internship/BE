@@ -10,21 +10,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
 
 @Configuration
-@RequiredArgsConstructor
 public class SecurityConfig {
-
-    private final CustomOAuth2UserService customOAuth2UserService;
-    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -35,26 +25,13 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {
-                })
+                .cors(cors -> {}) // bật cors
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/api/admin/**",
-                                "/h2-console/**",
-                                "/oauth2/**",
-                                "/oauth2/authorization/**",
-                                "/login/oauth2/**",
-                                "/login/**")
-                        .permitAll()
-                        .anyRequest().authenticated())
+                        .requestMatchers("/api/auth/**", "/api/admin/**", "/h2-console/**").permitAll()
+                        .anyRequest().authenticated()
+                )
                 .formLogin(login -> login.disable())
-                .httpBasic(basic -> basic.disable())
-                // Thêm OAuth2 login
-                .oauth2Login(oauth -> oauth
-                        .loginPage("/oauth2-login") // ⚡ Đổi sang endpoint khác, tránh conflict
-                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                        .successHandler(oAuth2LoginSuccessHandler));
+                .httpBasic(basic -> basic.disable());
 
         // Cho phép H2 console chạy trong frame
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
@@ -62,12 +39,13 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // cấu hình CORS
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE","PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

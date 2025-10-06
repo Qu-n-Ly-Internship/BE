@@ -14,10 +14,11 @@ import java.util.Set;
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "role_id")
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String name; // ADMIN, HR, MENTOR, INTERN
+    private String name;
 
     private String description;
 

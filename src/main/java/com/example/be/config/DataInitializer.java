@@ -1,3 +1,4 @@
+// Cập nhật DataInitializer.java để tạo roles và permissions mặc định
 package com.example.be.config;
 
 import com.example.be.entity.Permission;
@@ -24,32 +25,50 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // 1. Tạo Permissions
+        System.out.println("🚀 Starting DataInitializer...");
+
+        // 1. Tạo Permissions trước
         createPermissionsIfNotExist();
 
         // 2. Tạo Roles với permissions
         createRolesIfNotExist();
 
-        // 3. Tạo admin account
+        // 3. Fix existing users có role = NULL
+        fixExistingUsersWithNullRole();
+
+        // 4. Tạo admin account nếu chưa có
         createAdminIfNotExist();
+
+        System.out.println("✅ DataInitializer completed!");
     }
 
     private void createPermissionsIfNotExist() {
         String[][] permissions = {
-                { "READ_USERS", "Xem danh sách users", "USER_MANAGEMENT" },
-                { "CREATE_USERS", "Tạo user mới", "USER_MANAGEMENT" },
-                { "UPDATE_USERS", "Cập nhật thông tin user", "USER_MANAGEMENT" },
-                { "DELETE_USERS", "Xóa user", "USER_MANAGEMENT" },
-                { "MANAGE_ROLES", "Quản lý vai trò", "USER_MANAGEMENT" },
-                { "MANAGE_PERMISSIONS", "Quản lý quyền", "USER_MANAGEMENT" },
+                // Dashboard
+                {"VIEW_DASHBOARD", "Xem Dashboard", "DASHBOARD"},
 
-                { "READ_INTERNSHIPS", "Xem thông tin thực tập", "INTERNSHIP_MANAGEMENT" },
-                { "CREATE_INTERNSHIPS", "Tạo chương trình thực tập", "INTERNSHIP_MANAGEMENT" },
-                { "UPDATE_INTERNSHIPS", "Cập nhật thông tin thực tập", "INTERNSHIP_MANAGEMENT" },
-                { "APPROVE_INTERNSHIPS", "Duyệt thực tập sinh", "INTERNSHIP_MANAGEMENT" },
+                // Internship Management
+                {"VIEW_INTERNSHIPS", "Xem danh sách thực tập", "INTERNSHIP_MANAGEMENT"},
+                {"CREATE_INTERNSHIP", "Tạo thực tập mới", "INTERNSHIP_MANAGEMENT"},
+                {"EDIT_INTERNSHIP", "Chỉnh sửa thực tập", "INTERNSHIP_MANAGEMENT"},
+                {"DELETE_INTERNSHIP", "Xóa thực tập", "INTERNSHIP_MANAGEMENT"},
 
-                { "VIEW_REPORTS", "Xem báo cáo", "REPORTING" },
-                { "EXPORT_DATA", "Xuất dữ liệu", "REPORTING" }
+                // Student Management
+                {"VIEW_STUDENTS", "Xem danh sách sinh viên", "STUDENT_MANAGEMENT"},
+                {"CREATE_STUDENT", "Thêm sinh viên mới", "STUDENT_MANAGEMENT"},
+                {"EDIT_STUDENT", "Chỉnh sửa sinh viên", "STUDENT_MANAGEMENT"},
+                {"DELETE_STUDENT", "Xóa sinh viên", "STUDENT_MANAGEMENT"},
+
+
+
+                // User Management
+                {"MANAGE_USERS", "Quản lý người dùng", "USER_MANAGEMENT"},
+
+                // Permission Management
+                {"MANAGE_PERMISSIONS", "Quản lý phân quyền", "PERMISSION_MANAGEMENT"},
+
+                // Reporting
+                {"VIEW_REPORTS", "Xem báo cáo", "REPORTING"}
         };
 
         for (String[] perm : permissions) {
@@ -60,7 +79,7 @@ public class DataInitializer implements CommandLineRunner {
                         .module(perm[2])
                         .build();
                 permissionRepository.save(permission);
-                System.out.println("✅ Đã tạo permission: " + perm[0]);
+                System.out.println("✅ Created permission: " + perm[0]);
             }
         }
     }
@@ -74,55 +93,126 @@ public class DataInitializer implements CommandLineRunner {
                     .permissions(Set.copyOf(permissionRepository.findAll()))
                     .build();
             roleRepository.save(adminRole);
-            System.out.println("✅ Đã tạo role: ADMIN với tất cả permissions");
+            System.out.println("✅ Created role: ADMIN với tất cả permissions");
         }
 
-        // HR - Quản lý user và thực tập sinh
+        // HR - Quản lý user và thực tập sinh - role_id: 2
         if (roleRepository.findByName("HR").isEmpty()) {
             Set<Permission> hrPermissions = Set.of(
-                    permissionRepository.findByName("READ_USERS").orElseThrow(),
-                    permissionRepository.findByName("CREATE_USERS").orElseThrow(),
-                    permissionRepository.findByName("UPDATE_USERS").orElseThrow(),
-                    permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("CREATE_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("APPROVE_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("VIEW_REPORTS").orElseThrow());
+                    permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
+                    permissionRepository.findByName("VIEW_INTERNSHIPS").orElseThrow(),
+                    permissionRepository.findByName("CREATE_INTERNSHIP").orElseThrow(),
+                    permissionRepository.findByName("EDIT_INTERNSHIP").orElseThrow(),
+                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
+                    permissionRepository.findByName("CREATE_STUDENT").orElseThrow(),
+                    permissionRepository.findByName("EDIT_STUDENT").orElseThrow(),
+                    permissionRepository.findByName("MANAGE_USERS").orElseThrow(),
+                    permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
+            );
             Role hrRole = Role.builder()
                     .name("HR")
                     .description("Nhân viên nhân sự")
                     .permissions(hrPermissions)
                     .build();
             roleRepository.save(hrRole);
-            System.out.println("✅ Đã tạo role: HR");
+            System.out.println("✅ Created role: HR");
         }
 
-        // MENTOR - Theo dõi thực tập sinh
+        // MENTOR - Theo dõi thực tập sinh - role_id:3
         if (roleRepository.findByName("MENTOR").isEmpty()) {
             Set<Permission> mentorPermissions = Set.of(
-                    permissionRepository.findByName("READ_USERS").orElseThrow(),
-                    permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("UPDATE_INTERNSHIPS").orElseThrow(),
-                    permissionRepository.findByName("VIEW_REPORTS").orElseThrow());
+                    permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
+                    permissionRepository.findByName("VIEW_INTERNSHIPS").orElseThrow(),
+                    permissionRepository.findByName("EDIT_INTERNSHIP").orElseThrow(),
+                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow(),
+                    permissionRepository.findByName("EDIT_STUDENT").orElseThrow(),
+                    permissionRepository.findByName("VIEW_REPORTS").orElseThrow()
+            );
             Role mentorRole = Role.builder()
                     .name("MENTOR")
                     .description("Người hướng dẫn")
                     .permissions(mentorPermissions)
                     .build();
             roleRepository.save(mentorRole);
-            System.out.println("✅ Đã tạo role: MENTOR");
+            System.out.println("✅ Created role: MENTOR");
         }
 
-        // INTERN - Chỉ xem thông tin của mình
+        // INTERN - Chỉ xem thông tin của mình - role_id:4
         if (roleRepository.findByName("INTERN").isEmpty()) {
             Set<Permission> internPermissions = Set.of(
-                    permissionRepository.findByName("READ_INTERNSHIPS").orElseThrow());
+                    permissionRepository.findByName("VIEW_DASHBOARD").orElseThrow(),
+                    permissionRepository.findByName("VIEW_INTERNSHIPS").orElseThrow(),
+                    permissionRepository.findByName("VIEW_STUDENTS").orElseThrow()
+            );
             Role internRole = Role.builder()
                     .name("INTERN")
                     .description("Thực tập sinh")
                     .permissions(internPermissions)
                     .build();
             roleRepository.save(internRole);
-            System.out.println("✅ Đã tạo role: INTERN");
+            System.out.println("✅ Created role: INTERN");
+        }
+
+        // USER - Tài khoản mới đăng ký, chờ duyệt - role_id:5
+        if (roleRepository.findByName("USER").isEmpty()) {
+            // Người dùng mới không có quyền quản trị trước khi được duyệt
+            Set<Permission> userPermissions = Set.of();
+            Role userRole = Role.builder()
+                    .name("USER")
+                    .description("Người dùng mới đăng ký, chờ duyệt")
+                    .permissions(userPermissions)
+                    .build();
+            roleRepository.save(userRole);
+            System.out.println("✅ Created role: USER (role_id: " + userRole.getId() + ")");
+        } else {
+            Role existingUser = roleRepository.findByName("USER").get();
+            System.out.println("✅ Role USER already exists (role_id: " + existingUser.getId() + ")");
+        }
+    }
+
+    // 🔧 FIX: Sửa users có role = NULL
+    private void fixExistingUsersWithNullRole() {
+        var usersWithNullRole = userRepository.findAll().stream()
+                .filter(user -> user.getRole() == null)
+                .toList();
+
+        if (usersWithNullRole.isEmpty()) {
+            System.out.println("✅ No users with NULL role found");
+            return;
+        }
+
+        System.out.println("🔧 Fixing " + usersWithNullRole.size() + " users with NULL role...");
+
+        for (User user : usersWithNullRole) {
+            String roleName = determineRoleFromEmail(user.getEmail());
+            Role role = roleRepository.findByName(roleName).orElseThrow();
+
+            user.setRole(role);
+
+            // Set status nếu NULL
+            if (user.getStatus() == null) {
+                user.setStatus("ACTIVE");
+            }
+            if (user.getAuthProvider() == null) {
+                user.setAuthProvider("LOCAL");
+            }
+
+            userRepository.save(user);
+            System.out.println("✅ Fixed user: " + user.getEmail() + " -> Role: " + roleName);
+        }
+    }
+
+    private String determineRoleFromEmail(String email) {
+        String emailLower = email.toLowerCase();
+        // Chỉ match chính xác "admin@" ở đầu hoặc có dấu phân cách rõ ràng
+        if (emailLower.equals("admin@company.com") || emailLower.startsWith("admin@")) {
+            return "ADMIN";
+        } else if (emailLower.startsWith("hr@") || emailLower.contains("hr.")) {
+            return "HR";
+        } else if (emailLower.startsWith("mentor@") || emailLower.contains("mentor.")) {
+            return "MENTOR";
+        } else {
+            return "USER";  // Default to USER - không tự động gán ADMIN
         }
     }
 
@@ -131,16 +221,16 @@ public class DataInitializer implements CommandLineRunner {
             Role adminRole = roleRepository.findByName("ADMIN").orElseThrow();
 
             User admin = User.builder()
-                    .fullName("System Administrator")
+                    .fullName("Admin")
                     .email("admin@company.com")
-                    .username("admin@company.com")
                     .password(passwordEncoder.encode("admin123"))
+                    .authProvider("LOCAL")
                     .role(adminRole)
                     .status("ACTIVE")
                     .build();
 
             userRepository.save(admin);
-            System.out.println("✅ Đã tạo admin account: admin@company.com / admin123");
+            System.out.println("✅ Created admin account: admin@company.com / admin123");
         }
     }
 }

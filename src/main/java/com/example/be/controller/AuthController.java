@@ -27,10 +27,12 @@ public class AuthController {
     private final JwtService jwtService;
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@RequestBody RegisterRequest request) {
-        String result = authService.register(request);
-        return ResponseEntity.ok(Map.of("message", result));
+
+    public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterRequest request) {
+        Map<String, Object> result = authService.register(request);
+        return ResponseEntity.ok(result);
     }
+
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
