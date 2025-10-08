@@ -161,7 +161,7 @@ public class AuthService {
                 })
                 .orElseGet(() -> {
                     // Tạo mới user nếu chưa tồn tại
-                    Role role = roleRepository.findByName("INTERN")
+                    Role role = roleRepository.findByName("USER")
                             .orElseThrow(() -> new RuntimeException("Role mặc định không tồn tại"));
 
                     // Sinh dummy password (không dùng, nhưng bắt buộc để pass constraint)
