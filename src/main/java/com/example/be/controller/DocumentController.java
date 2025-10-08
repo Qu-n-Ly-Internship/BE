@@ -64,49 +64,51 @@ public class DocumentController {
 
     // 10. Lấy tài liệu của chính người dùng dựa vào uploaderEmail (không cần schema change)
     @GetMapping("/my")
-    public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
-        try {
-            if (email == null || email.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Thiếu tham số email"
-                ));
-            }
-
-            String sql = """
-                SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail, d.rejection_reason
-                FROM intern_documents d
-                WHERE d.file_detail LIKE ?
-                ORDER BY d.uploaded_at DESC
-                """;
-
-            List<Map<String, Object>> documents;
-            try {
-                // Try query including rejection_reason (preferred schema)
-                documents = jdbcTemplate.queryForList(sql, "%uploadedBy=" + email + "%");
-            } catch (Exception ex) {
-                // Fallback for schemas without rejection_reason column
-                String fallbackSql = """
-                    SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail
-                    FROM intern_documents d
-                    WHERE d.file_detail LIKE ?
-                    ORDER BY d.uploaded_at DESC
-                    """;
-                documents = jdbcTemplate.queryForList(fallbackSql, "%uploadedBy=" + email + "%");
-            }
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "data", documents,
-                    "total", documents.size()
-            ));
-        } catch (Exception e) {
+public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
+    try {
+        if (email == null || email.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Lỗi khi lấy tài liệu của bạn: " + e.getMessage()
+                    "message", "Thiếu tham số email"
             ));
         }
+
+        // Tìm intern_id từ email
+        String findInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
+        List<Map<String, Object>> internResult = jdbcTemplate.queryForList(findInternSql, email);
+        
+        if (internResult.isEmpty()) {
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", List.of(),
+                    "total", 0
+            ));
+        }
+        
+        Long internId = ((Number) internResult.get(0).get("intern_id")).longValue();
+
+        // Lấy TẤT CẢ documents của intern (bao gồm HR upload)
+        String sql = """
+            SELECT d.document_id, d.document_name, d.document_type, d.status, d.uploaded_at, d.file_detail, d.rejection_reason
+            FROM intern_documents d
+            WHERE d.intern_id = ?
+            ORDER BY d.uploaded_at DESC
+            """;
+
+        List<Map<String, Object>> documents = jdbcTemplate.queryForList(sql, internId);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", documents,
+                "total", documents.size()
+        ));
+    } catch (Exception e) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Lỗi khi lấy tài liệu của bạn: " + e.getMessage()
+        ));
     }
+}
 
     // 2. Lấy tài liệu chờ duyệt
     @GetMapping("/pending")
