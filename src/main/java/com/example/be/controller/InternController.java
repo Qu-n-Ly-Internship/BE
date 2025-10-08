@@ -29,15 +29,17 @@ public class InternController {
             @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         try {
-            // Build base query với JOIN
+            // Build base query với JOIN - chỉ lấy user có role INTERN
             StringBuilder sql = new StringBuilder("""
-                SELECT i.intern_id, i.fullname, i.dob, i.major_id, i.year_of_study, i.phone, i.available_from,
+                SELECT i.intern_id, i.fullname, i.email, i.dob, i.major_id, i.year_of_study, i.phone, i.available_from,
                        u.name_uni as university_name,
                        p.title as program_title, p.start_date as program_start, p.end_date as program_end,
                        COUNT(d.document_id) as document_count,
                        SUM(CASE WHEN d.status = 'PENDING' THEN 1 ELSE 0 END) as pending_docs,
                        SUM(CASE WHEN d.status = 'APPROVED' THEN 1 ELSE 0 END) as approved_docs
                 FROM intern_profiles i
+                INNER JOIN users usr ON i.email = usr.email
+                INNER JOIN roles r ON usr.role_id = r.role_id AND r.name = 'INTERN'
                 LEFT JOIN universities u ON i.uni_id = u.uni_id
                 LEFT JOIN intern_programs p ON i.program_id = p.program_id
                 LEFT JOIN intern_documents d ON i.intern_id = d.intern_id
@@ -80,7 +82,7 @@ public class InternController {
 
             // Group by để tránh duplicate
             sql.append("""
-                GROUP BY i.intern_id, i.fullname, i.dob, i.major_id, i.year_of_study, i.phone, i.available_from,
+                GROUP BY i.intern_id, i.fullname, i.email, i.dob, i.major_id, i.year_of_study, i.phone, i.available_from,
                          u.name_uni, p.title, p.start_date, p.end_date
                 ORDER BY i.fullname ASC
                 """);
@@ -351,8 +353,20 @@ public class InternController {
     private Map<String, Object> formatInternResponse(Map<String, Object> row) {
         Map<String, Object> result = new HashMap<>();
         result.put("id", row.get("intern_id"));
-        result.put("student", row.get("fullname") != null ? row.get("fullname") : "");
-        result.put("studentEmail", row.get("student_email") != null ? row.get("student_email") : "");
+        result.put("internId", row.get("intern_id")); // ✅ Thêm internId
+        
+        // ✅ Thêm cả fullName và name để tương thích
+        String fullname = row.get("fullname") != null ? row.get("fullname").toString() : "";
+        result.put("fullName", fullname);
+        result.put("name", fullname);
+        result.put("student", fullname);
+        
+        // ✅ Thêm email từ bảng intern_profiles
+        String email = row.get("email") != null ? row.get("email").toString() : "";
+        result.put("email", email);
+        result.put("studentEmail", email);
+        result.put("username", email);
+        
         result.put("school", row.get("university_name") != null ? row.get("university_name") : "");
         result.put("major", getMajorName(row.get("major_id")));
         result.put("phone", row.get("phone") != null ? row.get("phone") : "");
