@@ -3,7 +3,6 @@ package com.example.be.controller;
 import com.example.be.entity.InternDocument;
 import com.example.be.entity.InternProfile;
 import com.example.be.repository.DocumentRepository;
-import com.example.be.repository.InternDocumentRepository;
 import com.example.be.repository.InternProfileRepository;
 import com.example.be.service.CloudinaryRestService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -84,6 +82,34 @@ public class CloudinaryController {
         }
 
         return ResponseEntity.ok(fileUrls);
+    }
+
+
+    @PutMapping("/{documentId}/accept")
+    public ResponseEntity<?> acceptDocument(
+            @PathVariable Long documentId,
+            @RequestParam("internId") Long internId
+    ) {
+        InternDocument doc = documentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy document với ID: " + documentId));
+
+        // Kiểm tra document có thuộc về intern này không
+        if (!doc.getInternProfile().getId().equals(internId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Document này không thuộc về intern ID: " + internId);
+        }
+
+        // Kiểm tra trạng thái
+        if (!"PENDING".equals(doc.getStatus())) {
+            return ResponseEntity.badRequest().body("Hợp đồng đã được xử lý rồi!");
+        }
+
+        // Cập nhật trạng thái
+        doc.setStatus("ACCEPTED");
+        doc.setReviewedAt(LocalDateTime.now());
+        documentRepository.save(doc);
+
+        return ResponseEntity.ok("Hợp đồng đã được xác nhận thành công.");
     }
 
 }
