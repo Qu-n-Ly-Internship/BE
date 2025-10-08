@@ -43,12 +43,24 @@ public class AdminController {
                 fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
             }
 
+            // ✅ Generate username from email (required field)
+            String username = email.split("@")[0];
+            
+            // ✅ Check if username already exists, add suffix if needed
+            String finalUsername = username;
+            int suffix = 1;
+            while (userRepository.findByUsername(finalUsername).isPresent()) {
+                finalUsername = username + suffix;
+                suffix++;
+            }
+
             Role role = roleRepository.findByName(roleName)
                     .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
 
             User user = new User();
             user.setFullName(fullName);
             user.setEmail(email);
+            user.setUsername(finalUsername); // ✅ Set username with uniqueness check
             user.setPassword(passwordEncoder.encode(password));
             user.setRole(role);
             user.setStatus("ACTIVE");
@@ -115,6 +127,18 @@ public class AdminController {
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
 
+            // ✅ FIX: Ensure username is set for existing users that might not have it
+            if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+                String username = user.getEmail().split("@")[0];
+                String finalUsername = username;
+                int suffix = 1;
+                while (userRepository.findByUsername(finalUsername).isPresent()) {
+                    finalUsername = username + suffix;
+                    suffix++;
+                }
+                user.setUsername(finalUsername);
+            }
+
             if (request.containsKey("fullName")) {
                 user.setFullName(request.get("fullName"));
             }
@@ -156,6 +180,19 @@ public class AdminController {
         try {
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
+            
+            // ✅ FIX: Ensure username is set for existing users
+            if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+                String username = user.getEmail().split("@")[0];
+                String finalUsername = username;
+                int suffix = 1;
+                while (userRepository.findByUsername(finalUsername).isPresent()) {
+                    finalUsername = username + suffix;
+                    suffix++;
+                }
+                user.setUsername(finalUsername);
+            }
+            
             user.setStatus("ACTIVE");
             userRepository.save(user);
             return ResponseEntity.ok(Map.of("message", "User " + user.getEmail() + " đã được duyệt!"));
@@ -170,6 +207,19 @@ public class AdminController {
         try {
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
+            
+            // ✅ FIX: Ensure username is set for existing users
+            if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+                String username = user.getEmail().split("@")[0];
+                String finalUsername = username;
+                int suffix = 1;
+                while (userRepository.findByUsername(finalUsername).isPresent()) {
+                    finalUsername = username + suffix;
+                    suffix++;
+                }
+                user.setUsername(finalUsername);
+            }
+            
             user.setStatus("INACTIVE");
             userRepository.save(user);
             return ResponseEntity.ok(Map.of("message", "User " + user.getEmail() + " đã bị khóa!"));
@@ -184,6 +234,18 @@ public class AdminController {
         try {
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
+            
+            // ✅ FIX: Ensure username is set for existing users
+            if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+                String username = user.getEmail().split("@")[0];
+                String finalUsername = username;
+                int suffix = 1;
+                while (userRepository.findByUsername(finalUsername).isPresent()) {
+                    finalUsername = username + suffix;
+                    suffix++;
+                }
+                user.setUsername(finalUsername);
+            }
             
             // Reset về role USER
             Role userRole = roleRepository.findByName("USER")
