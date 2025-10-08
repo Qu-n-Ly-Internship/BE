@@ -273,6 +273,52 @@ public class DocumentController {
                 ));
             }
 
+            // ✅ FIX: Nếu uploaderEmail được cung cấp nhưng không có internId,
+            // tìm hoặc tạo intern_profile cho user này
+            Long finalInternId = internId;
+            if (finalInternId == null && uploaderEmail != null && !uploaderEmail.isBlank()) {
+                // Tìm user theo email
+                var userOpt = userRepository.findByEmail(uploaderEmail.trim());
+                if (userOpt.isEmpty()) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                            "success", false,
+                            "message", "Không tìm thấy user với email: " + uploaderEmail
+                    ));
+                }
+                
+                var user = userOpt.get();
+                System.out.println("🔍 Found user: " + user.getEmail() + " - " + user.getFullName());
+                
+                // Kiểm tra xem user đã có intern_profile chưa
+                String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ? LIMIT 1";
+                try {
+                    finalInternId = jdbcTemplate.queryForObject(checkInternSql, Long.class, uploaderEmail.trim());
+                    System.out.println("✅ Found existing intern_profile with ID: " + finalInternId);
+                } catch (Exception ex) {
+                    // Chưa có intern_profile, tạo mới với các giá trị mặc định
+                    System.out.println("📝 Creating new intern_profile for: " + user.getEmail());
+                    String insertInternSql = """
+                        INSERT INTO intern_profiles 
+                        (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
+                        VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
+                        """;
+                    jdbcTemplate.update(insertInternSql, user.getFullName(), user.getEmail());
+                    // Lấy ID vừa tạo
+                    finalInternId = jdbcTemplate.queryForObject(
+                        "SELECT LAST_INSERT_ID()", Long.class
+                    );
+                    System.out.println("✅ Created new intern_profile with ID: " + finalInternId);
+                }
+            }
+            
+            // Kiểm tra finalInternId không null trước khi insert
+            if (finalInternId == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Không thể xác định intern_id. Vui lòng cung cấp internId hoặc uploaderEmail."
+                ));
+            }
+
             // TODO: Save file to storage (local/cloud)
             String fileName = file.getOriginalFilename();
             String fileDetail = String.format("%s (%.2f KB)", fileName, file.getSize() / 1024.0);
@@ -282,11 +328,11 @@ public class DocumentController {
 
             // Insert vào database
             String insertSql = """
-                INSERT INTO intern_documents (intern_id, document_type, uploaded_at, status, file_detail)
-                VALUES (?, ?, NOW(), 'PENDING', ?)
+                INSERT INTO intern_documents (intern_id, document_name, document_type, uploaded_at, status, file_detail)
+                VALUES (?, ?, ?, NOW(), 'PENDING', ?)
                 """;
 
-            jdbcTemplate.update(insertSql, internId, documentType, fileDetail);
+            jdbcTemplate.update(insertSql, finalInternId, fileName, documentType, fileDetail);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -458,7 +504,6 @@ public class DocumentController {
                 jdbcTemplate.update(updateSql, note.trim(), id);
 
                 return ResponseEntity.ok(Map.of(
-                        "success", true,
                         "message", "Tài liệu đã bị từ chối: " + note
                 ));
             }
@@ -467,6 +512,139 @@ public class DocumentController {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Xử lý tài liệu thất bại: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 10. Upload tài liệu cho intern cụ thể (HR upload hợp đồng)
+    @PostMapping("/upload-for-intern")
+    public ResponseEntity<?> uploadForIntern(
+            @RequestParam("internId") Long internId,
+            @RequestParam("type") String documentType,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file
+    ) {
+        try {
+            // Validate file
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "File không được để trống"
+                ));
+            }
+
+            // Check file size (max 10MB)
+            if (file.getSize() > 10 * 1024 * 1024) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "File không được vượt quá 10MB"
+                ));
+            }
+
+            // Kiểm tra intern tồn tại
+            String checkSql = "SELECT COUNT(*) FROM intern_profiles WHERE intern_id = ?";
+            int count = jdbcTemplate.queryForObject(checkSql, Integer.class, internId);
+            if (count == 0) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Không tìm thấy thực tập sinh với ID: " + internId
+                ));
+            }
+
+            String fileName = file.getOriginalFilename();
+            String fileDetail = String.format("%s (%.2f KB) | uploadedByHR", fileName, file.getSize() / 1024.0);
+
+            // Insert vào database với status PENDING (chờ intern xác nhận)
+            String insertSql = """
+                INSERT INTO intern_documents (intern_id, document_name, document_type, uploaded_at, status, file_detail)
+                VALUES (?, ?, ?, NOW(), 'PENDING', ?)
+                """;
+
+            jdbcTemplate.update(insertSql, internId, fileName, documentType, fileDetail);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Tải lên hợp đồng thành công! Chờ thực tập sinh xác nhận.",
+                    "data", Map.of(
+                            "fileName", fileName,
+                            "type", documentType,
+                            "internId", internId
+                    )
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Tải lên thất bại: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 11. Xác nhận hợp đồng (Intern xác nhận đã đọc và đồng ý)
+    @PutMapping("/{id}/confirm")
+    public ResponseEntity<?> confirmContract(@PathVariable Long id) {
+        try {
+            // Kiểm tra tài liệu tồn tại
+            String checkSql = "SELECT COUNT(*) FROM intern_documents WHERE document_id = ?";
+            int count = jdbcTemplate.queryForObject(checkSql, Integer.class, id);
+
+            if (count == 0) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Không tìm thấy tài liệu với ID: " + id
+                ));
+            }
+
+            // Cập nhật status thành CONFIRMED
+            String updateSql = """
+                UPDATE intern_documents 
+                SET status = 'CONFIRMED',
+                    reviewed_at = NOW()
+                WHERE document_id = ?
+                """;
+
+            jdbcTemplate.update(updateSql, id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Đã xác nhận hợp đồng thành công!"
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Xác nhận thất bại: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 12. Xóa tài liệu
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteDocument(@PathVariable Long id) {
+        try {
+            // Kiểm tra tài liệu tồn tại
+            String checkSql = "SELECT COUNT(*) FROM intern_documents WHERE document_id = ?";
+            int count = jdbcTemplate.queryForObject(checkSql, Integer.class, id);
+
+            if (count == 0) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Không tìm thấy tài liệu với ID: " + id
+                ));
+            }
+
+            // Xóa tài liệu
+            String deleteSql = "DELETE FROM intern_documents WHERE document_id = ?";
+            jdbcTemplate.update(deleteSql, id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Đã xóa tài liệu thành công!"
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Xóa tài liệu thất bại: " + e.getMessage()
             ));
         }
     }
