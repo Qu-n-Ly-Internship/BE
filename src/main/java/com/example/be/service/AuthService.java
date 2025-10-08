@@ -29,6 +29,7 @@ public class AuthService {
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
+
     // ==================== REGISTER ====================
     public Map<String, Object> register(RegisterRequest request) {
         try {
@@ -70,34 +71,33 @@ public class AuthService {
             user.setRole(role);
 
             System.out.println("🔍 DEBUG Register - Email: " + user.getEmail() +
-                             " | Role: " + role.getName() +
-                             " (ID: " + role.getId() + ") | Status: " + user.getStatus());
+                    " | Role: " + role.getName() +
+                    " (ID: " + role.getId() + ") | Status: " + user.getStatus());
 
             User savedUser = userRepository.save(user);
 
             System.out.println("✅ User saved - ID: " + savedUser.getId() +
-                             " | Role: " + savedUser.getRole().getName() +
-                             " | Status: " + savedUser.getStatus());
+                    " | Role: " + savedUser.getRole().getName() +
+                    " | Status: " + savedUser.getStatus());
 
             // Trả về format đồng nhất với login
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Đăng ký thành công! Tài khoản của bạn đang chờ admin duyệt. Bạn sẽ nhận được thông báo khi tài khoản được kích hoạt.");
+            response.put("message",
+                    "Đăng ký thành công! Tài khoản của bạn đang chờ admin duyệt. Bạn sẽ nhận được thông báo khi tài khoản được kích hoạt.");
             response.put("user", Map.of(
                     "id", savedUser.getId(),
                     "fullName", savedUser.getFullName(),
                     "email", savedUser.getEmail(),
                     "status", savedUser.getStatus(),
-                    "role", savedUser.getRole().getName()
-            ));
+                    "role", savedUser.getRole().getName()));
 
             return response;
 
         } catch (Exception e) {
             return Map.of(
                     "success", false,
-                    "message", "Đăng ký thất bại: " + e.getMessage()
-            );
+                    "message", "Đăng ký thất bại: " + e.getMessage());
         }
     }
 
@@ -146,6 +146,7 @@ public class AuthService {
 
         response.put("success", true);
         response.put("message", "Đăng nhập thành công!");
+
         var permissions = user.getRole()
                 .getPermissions()
                 .stream()
@@ -161,6 +162,7 @@ public class AuthService {
 
         String token = jwtUtil.generateToken(request.getEmail(), user.getRole().getName());
         response.put("token", token);
+
         return response;
     }
 
