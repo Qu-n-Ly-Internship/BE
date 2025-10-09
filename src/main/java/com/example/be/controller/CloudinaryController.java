@@ -41,44 +41,48 @@ public class CloudinaryController {
     // ============================
     // UPLOAD FILE LÊN CLOUDINARY
     // ============================
-        @PostMapping("/upload_cloud")
-        public InternDocument uploadDocument(
-                @RequestParam("file") MultipartFile file,
-                @RequestParam("internProfileId") Long internProfileId,
-                @RequestParam("hrId") Long hrId  // ✅ Thêm HR ID
-        ) throws IOException {
+    @PostMapping("/upload_cloud")
+    public InternDocument uploadDocument(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("internProfileId") Long internProfileId,
+            @RequestParam("hrId") Long hrId
+    ) throws IOException {
 
-            // 1️⃣ Upload file lên Cloudinary
-            String response = cloudinaryRestService.uploadFile(file);
+        // 1️⃣ Upload file lên Cloudinary
+        String response = cloudinaryRestService.uploadFile(file);
 
-            // 2️⃣ Parse JSON để lấy URL và loại file
-            JsonNode json = objectMapper.readTree(response);
-            String fileUrl = json.get("secure_url").asText();
-            String type = json.get("resource_type").asText();
+        // 2️⃣ Parse JSON để lấy URL và loại file
+        JsonNode json = objectMapper.readTree(response);
+        String fileUrl = json.get("secure_url").asText();
+        String type = json.get("resource_type").asText();
 
-            // 3️⃣ Tìm InternProfile
-            InternProfile internProfile = internProfileRepository.findById(internProfileId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy internProfile có ID: " + internProfileId));
+        // 3️⃣ Tìm InternProfile
+        InternProfile internProfile = internProfileRepository.findById(internProfileId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy internProfile có ID: " + internProfileId));
 
-            // 4️⃣ Tìm HR theo hrId
-            Hr hr = hrRepository.findById(hrId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy HR có ID: " + hrId));
+        // 4️⃣ Tìm HR theo hrId
+        Hr hr = hrRepository.findById(hrId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy HR có ID: " + hrId));
 
-            // 5️⃣ Tạo mới InternDocument
-            InternDocument doc = new InternDocument();
-            doc.setInternProfile(internProfile);
-            doc.setHr(hr); // ✅ Gắn HR upload
-            doc.setDocumentName(file.getOriginalFilename());
-            doc.setDocumentType(type);
-            doc.setFileDetail(fileUrl);
-            doc.setUploadedAt(LocalDateTime.now());
-            doc.setStatus("PENDING");
+        // 5️⃣ Tạo mới InternDocument
+        InternDocument doc = new InternDocument();
+        doc.setInternProfile(internProfile);
+        doc.setHr(hr);
+        doc.setDocumentName(file.getOriginalFilename());
+        doc.setDocumentType(type);
+        doc.setFileDetail(fileUrl);
+        doc.setUploadedAt(LocalDateTime.now());
+        doc.setStatus("PENDING");
 
-            // 6️⃣ Lưu DB
-            documentRepository.save(doc);
+        // ✅ Hiển thị luôn thời gian reviewedAt (lúc upload)
+        doc.setReviewedAt(LocalDateTime.now());
 
-            return doc;
-        }
+        // 6️⃣ Lưu DB
+        documentRepository.save(doc);
+
+        return doc;
+    }
+
 
     // ============================
     // LẤY URL FILE THEO INTERN_ID
