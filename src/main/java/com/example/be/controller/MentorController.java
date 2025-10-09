@@ -209,7 +209,7 @@ public class MentorController {
                 // Cập nhật nếu đã tồn tại
                 String updateSql = """
                     UPDATE mentor_assignments 
-                    SET department_id = ?, start_date = COALESCE(?, start_date, CURDATE())
+                    SET department_id = ?, start_date = COALESCE(?, start_date, NOW())
                     WHERE mentor_id = ? AND intern_id = ?
                     """;
                 jdbcTemplate.update(updateSql, departmentId, startDate, mentorId, internId);
@@ -219,10 +219,10 @@ public class MentorController {
                         "message", "Cập nhật phân công mentor thành công!"
                 ));
             } else {
-                // Thêm mới - Tự động set ngày hiện tại nếu không có startDate
+                // Thêm mới - Tự động set ngày giờ hiện tại nếu không có startDate
                 String insertSql = """
                     INSERT INTO mentor_assignments (mentor_id, intern_id, department_id, start_date)
-                    VALUES (?, ?, ?, COALESCE(?, CURDATE()))
+                    VALUES (?, ?, ?, COALESCE(?, NOW()))
                     """;
                 jdbcTemplate.update(insertSql, mentorId, internId, departmentId, startDate);
 
@@ -277,7 +277,7 @@ public class MentorController {
                 // Cập nhật mentor_id
                 String updateSql = """
                     UPDATE mentor_assignments 
-                    SET mentor_id = ?, start_date = CURDATE()
+                    SET mentor_id = ?, start_date = NOW()
                     WHERE intern_id = ?
                     """;
                 jdbcTemplate.update(updateSql, mentorId, internId);
@@ -285,7 +285,7 @@ public class MentorController {
                 // Thêm mới
                 String insertSql = """
                     INSERT INTO mentor_assignments (mentor_id, intern_id, start_date)
-                    VALUES (?, ?, CURDATE())
+                    VALUES (?, ?, NOW())
                     """;
                 jdbcTemplate.update(insertSql, mentorId, internId);
             }
