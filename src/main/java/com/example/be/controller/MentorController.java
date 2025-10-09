@@ -209,7 +209,7 @@ public class MentorController {
                 // Cập nhật nếu đã tồn tại
                 String updateSql = """
                     UPDATE mentor_assignments 
-                    SET department_id = ?, start_date = ?
+                    SET department_id = ?, start_date = COALESCE(?, start_date, CURDATE())
                     WHERE mentor_id = ? AND intern_id = ?
                     """;
                 jdbcTemplate.update(updateSql, departmentId, startDate, mentorId, internId);
@@ -219,10 +219,10 @@ public class MentorController {
                         "message", "Cập nhật phân công mentor thành công!"
                 ));
             } else {
-                // Thêm mới
+                // Thêm mới - Tự động set ngày hiện tại nếu không có startDate
                 String insertSql = """
                     INSERT INTO mentor_assignments (mentor_id, intern_id, department_id, start_date)
-                    VALUES (?, ?, ?, ?)
+                    VALUES (?, ?, ?, COALESCE(?, CURDATE()))
                     """;
                 jdbcTemplate.update(insertSql, mentorId, internId, departmentId, startDate);
 
