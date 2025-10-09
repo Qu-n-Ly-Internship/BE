@@ -49,6 +49,17 @@ public class AuthService {
                 fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
             }
             user.setFullName(fullName);
+            
+            // ✅ Set username from email (required field)
+            String username = request.getEmail().split("@")[0];
+            String finalUsername = username;
+            int suffix = 1;
+            while (userRepository.findByUsername(finalUsername).isPresent()) {
+                finalUsername = username + suffix;
+                suffix++;
+            }
+            user.setUsername(finalUsername);
+            
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setStatus("ACTIVE"); //
             user.setAuthProvider("LOCAL"); // Set authProvider
@@ -135,7 +146,7 @@ public class AuthService {
 
         response.put("success", true);
         response.put("message", "Đăng nhập thành công!");
-        // Trả về thông tin user + permissions
+
         var permissions = user.getRole()
                 .getPermissions()
                 .stream()
@@ -170,7 +181,7 @@ public class AuthService {
                 })
                 .orElseGet(() -> {
                     // Tạo mới user nếu chưa tồn tại
-                    Role role = roleRepository.findByName("INTERN")
+                    Role role = roleRepository.findByName("USER")
                             .orElseThrow(() -> new RuntimeException("Role mặc định không tồn tại"));
 
                     // Sinh dummy password (không dùng, nhưng bắt buộc để pass constraint)
