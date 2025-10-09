@@ -1,6 +1,8 @@
 package com.example.be.entity;
 
 import jakarta.persistence.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.util.List;
 
 @Entity
@@ -27,4 +29,8 @@ public class Hr {
 
     public List<InternDocument> getInternDocuments() { return internDocuments; }
     public void setInternDocuments(List<InternDocument> internDocuments) { this.internDocuments = internDocuments; }
+
+
+    public interface HrRepository extends JpaRepository<Hr, Long> {
+    }
 }
