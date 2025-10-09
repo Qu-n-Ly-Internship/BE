@@ -29,7 +29,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // Ở đây tôi giả sử role là "ROLE_INTERN" mặc định, bạn có thể query user từ DB
         // dựa trên email
         Set<GrantedAuthority> authorities = new HashSet<>();
-        authorities.add(new SimpleGrantedAuthority("INTERN")); // Thay bằng role thực từ DB nếu cần
+        authorities.add(new SimpleGrantedAuthority("USER")); // Thay bằng role thực từ DB nếu cần
 
         // Return DefaultOAuth2User với authorities
         return new DefaultOAuth2User(authorities, oAuth2User.getAttributes(), "email");

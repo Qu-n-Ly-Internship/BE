@@ -149,36 +149,43 @@ public class AuthService {
     public User processOAuthPostLogin(org.springframework.security.oauth2.core.user.OAuth2User oAuth2User) {
         String email = (String) oAuth2User.getAttribute("email");
         String name = (String) oAuth2User.getAttribute("name");
-        String sub = (String) oAuth2User.getAttribute("sub"); // unique id từ Google
+        String sub = (String) oAuth2User.getAttribute("sub");
+
+        // Khai báo defaultRole trước để sử dụng chung
+        Role defaultRole = roleRepository.findByName("USER")
+                .orElseThrow(() -> new RuntimeException("Role USER not found"));
 
         return userRepository.findByEmail(email)
                 .map(user -> {
-                    // Update thông tin cơ bản khi login lại bằng Google
+                    // Update thông tin cơ bản
                     user.setFullName(name);
                     user.setStatus("ACTIVE");
-                    user.setAuthProvider("GOOGLE"); // đảm bảo ghi lại provider
+                    user.setAuthProvider("GOOGLE");
+
+                    // Gán role USER nếu null hoặc không phải USER
+                    if (user.getRole() == null || !user.getRole().getName().equals("USER")) {
+                        user.setRole(defaultRole);
+                        System.out.println("🔍 Updated role to USER for existing user: " + email);
+                    }
+
                     return userRepository.save(user);
                 })
                 .orElseGet(() -> {
                     // Tạo mới user nếu chưa tồn tại
-                    Role role = roleRepository.findByName("INTERN")
-                            .orElseThrow(() -> new RuntimeException("Role mặc định không tồn tại"));
-
-                    // Sinh dummy password (không dùng, nhưng bắt buộc để pass constraint)
                     String dummyPassword = passwordEncoder.encode(UUID.randomUUID().toString());
 
                     User newUser = User.builder()
                             .email(email)
-                            .username("google_" + sub) // tránh trùng username
                             .fullName(name)
                             .password(dummyPassword)
-                            .role(role)
-                            .authProvider("GOOGLE") // ✅ chỉ set khi login bằng Google
+                            .role(defaultRole)
+                            .authProvider("GOOGLE")
                             .status("ACTIVE")
                             .build();
 
+                    System.out.println("🔍 Creating new user: Email: " + email +
+                            " | Role: " + defaultRole.getName());
+
                     return userRepository.save(newUser);
                 });
-    }
-
-}
+    }}
