@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface DocumentRepository extends JpaRepository<InternDocument, Long> {
 
-    @Query("SELECT d.fileDetail FROM InternDocument d WHERE d.internProfile.id = :internId")
-    List<String> findFileUrlsByInternId(@Param("internId") Long internId);
+    // Lấy document mới nhất theo internId (uploadedAt mới nhất)
+    InternDocument findTopByInternProfile_IdOrderByUploadedAtDesc(Long internId);
 }

@@ -17,7 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -85,21 +87,34 @@ public class CloudinaryController {
 
 
     // ============================
-    // LẤY URL FILE THEO INTERN_ID
-    // ============================
+// LẤY URL FILE THEO INTERN_ID
+// ============================
     @GetMapping("/get-url/{internId}")
-    public ResponseEntity<?> getFileUrlsByInternId(@PathVariable Long internId) {
-        // Gọi repository để lấy danh sách URL
-        List<String> fileUrls = documentRepository.findFileUrlsByInternId(internId);
+    public ResponseEntity<?> getLatestFileUrlByInternId(@PathVariable Long internId) {
+        // Lấy document mới nhất của intern
+        InternDocument document = documentRepository.findTopByInternProfile_IdOrderByUploadedAtDesc(internId);
 
-        if (fileUrls == null || fileUrls.isEmpty()) {
+        if (document == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Không tìm thấy file cho intern_id: " + internId);
         }
 
-        return ResponseEntity.ok(fileUrls);
-    }
+        // Lấy thông tin HR
+        Hr hr = document.getHr();
+        Long hrId = (hr != null) ? hr.getId() : null;
+        String hrName = (hr != null) ? hr.getFullname() : null;
 
+        // Tạo response JSON
+        Map<String, Object> response = new HashMap<>();
+        response.put("document_id", document.getId()); // ✅ THÊM DÒNG NÀY
+        response.put("hr_id", hrId);
+        response.put("name_hr", hrName);
+        response.put("file_url", document.getFileDetail());
+        response.put("uploaded_at", document.getUploadedAt());
+        response.put("status", document.getStatus());
+
+        return ResponseEntity.ok(response);
+    }
 
     @PutMapping("/{documentId}/accept")
     public ResponseEntity<?> acceptDocument(
