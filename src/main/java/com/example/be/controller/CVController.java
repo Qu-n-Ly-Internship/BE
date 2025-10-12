@@ -7,21 +7,83 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.web.bind.annotation.*;
-
+import com.example.be.service.EmailService;
+import com.example.be.entity.InternProfile;
+import com.example.be.repository.InternProfileRepository;
+import com.example.be.entity.InternDocument;
+import com.example.be.repository.InternDocumentRepository;
+import org.springframework.http.ResponseEntity;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/intern-profiles")
 @RequiredArgsConstructor
 public class InternProfileController {
-
+    private static final Logger logger = LoggerFactory.getLogger(InternProfileController.class);
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
+    private final InternDocumentRepository internDocumentRepository;
+    private final EmailService emailService;
+    private final InternProfileRepository internProfileRepository;
+    // Biến tạm ThreadLocal để lưu trạng thái duyệt/từ chối trong luồng hiện tại
+    private static final ThreadLocal<String> tempAction = new ThreadLocal<>();
+    // Duyệt hoặc từ chối tạm (lưu trạng thái vào ThreadLocal)
+    @PutMapping("/{documentId}/temp-action")
+    public ResponseEntity<?> tempAction(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String action = request.get("action");  // "approve" hoặc "reject"
+        if (!"approve".equalsIgnoreCase(action) && !"reject".equalsIgnoreCase(action)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Hành động không hợp lệ!"));
+        }
 
+        InternProfile profile = internProfileRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ!"));
+
+        tempAction.set(action);  // Lưu tạm action
+        return ResponseEntity.ok(Map.of("message", "Lưu tạm hành động: " + action));
+    }
+
+    // Hủy hành động tạm
+    @PutMapping("/{documentId}/cancel-action")
+    public ResponseEntity<?> cancelAction(@PathVariable Long id) {
+        tempAction.remove();  // Xóa trạng thái tạm
+        return ResponseEntity.ok(Map.of("message", "Hủy hành động tạm thành công!"));
+    }
+
+    // Xác nhận gửi email và cập nhật trạng thái
+    @PostMapping("/confirm-send-email")
+    public ResponseEntity<?> confirmSendEmail(@RequestBody Map<String, Long> request) {
+        String action = tempAction.get();  // Lấy trạng thái tạm
+        if (action == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Không có hành động tạm để xác nhận!"));
+        }
+
+        Long documentId = request.get("documentId");
+        InternProfile profile = internProfileRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ!"));
+        InternDocument document = internDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài liệu!"));
+        String statusTag = "approve".equalsIgnoreCase(action) ? "accepted" : "rejected";
+        String email = profile.getEmail();  // Giả sử có email, nếu không join với User
+        String fullName = profile.getFullName();
+
+        try {
+            emailService.sendStatusEmail(email, fullName, statusTag);
+            // Cập nhật trạng thái (sau này thêm email_sended)
+            document.setStatus(statusTag.equals("accepted") ? "APPROVED" : "REJECTED");
+            internProfileRepository.save(profile);
+            tempAction.remove();  // Xóa trạng thái tạm sau khi gửi
+            return ResponseEntity.ok(Map.of("message", "Gửi email và cập nhật trạng thái thành công!"));
+        } catch (Exception e) {
+            logger.error("Lỗi gửi email cho internId: {}", documentId, e);
+            return ResponseEntity.badRequest().body(Map.of("message", "Gửi email thất bại: " + e.getMessage()));
+        }
+    }
     // 1. Lấy danh sách intern profiles với filter
     @GetMapping("")
     public ResponseEntity<?> getAllProfiles(
