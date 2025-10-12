@@ -1,5 +1,4 @@
-server:
-  port: 8090
+
 
 cloudinary:
   cloud_name: dnhofykst
