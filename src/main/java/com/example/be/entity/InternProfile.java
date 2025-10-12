@@ -42,4 +42,7 @@ public class InternProfile {
     @ManyToOne
     @JoinColumn(name = "uni_id")
     private University university;
+
+    @Column(name = "email", nullable = true)  // Thêm trường email
+    private String email;
 }
