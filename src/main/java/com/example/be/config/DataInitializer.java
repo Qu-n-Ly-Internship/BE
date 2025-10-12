@@ -228,6 +228,7 @@ public class DataInitializer implements CommandLineRunner {
                     .role(adminRole)
                     .status("ACTIVE")
                     .build();
+            admin.setUsername("admin");
 
             userRepository.save(admin);
             System.out.println("✅ Created admin account: admin@company.com / admin123");

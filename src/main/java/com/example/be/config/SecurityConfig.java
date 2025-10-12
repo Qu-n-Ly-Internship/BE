@@ -32,9 +32,16 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/admin/**",
+                                "/api/documents/**",
+                                "/api/profiles/**",
+                                "/api/interns/**",
+                                "/api/intern-profiles/**",
+                                "/api/mentors/**",
+                                "/api/internships/**",
+                                "/api/profile/**",
                                 "/oauth2/**",
                                 "/oauth2/authorization/**",
                                 "/login/oauth2/**",
@@ -63,7 +70,12 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .formLogin(login -> login.disable())
-                .httpBasic(Customizer.withDefaults());
+                .httpBasic(basic -> basic.disable())
+                // Thêm OAuth2 login
+                .oauth2Login(oauth -> oauth
+                        .loginPage("/oauth2-login") // ⚡ Đổi sang endpoint khác, tránh conflict
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                        .successHandler(oAuth2LoginSuccessHandler));
 
         // Cho phép H2 console chạy trong frame
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
