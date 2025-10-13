@@ -1,4 +1,3 @@
-// Cập nhật DataInitializer.java để tạo roles và permissions mặc định
 package com.example.be.config;
 
 import com.example.be.entity.Permission;
