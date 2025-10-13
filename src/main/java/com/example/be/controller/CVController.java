@@ -64,7 +64,7 @@ public class CVController {
         }
     }
 
-    // 2. Lấy CV của chính người dùng dựa vào email
+    // 2. Lấy CV của chính người dùng dựa vào email của họ
     @GetMapping("/my")
     public ResponseEntity<?> getMyCVs(@RequestParam("email") String email) {
         try {
