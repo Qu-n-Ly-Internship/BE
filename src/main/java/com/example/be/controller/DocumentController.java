@@ -238,7 +238,8 @@ public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
         }
     }
 
-    // 6. Upload tài liệu mới
+    // 6. Upload tài liệu mới (HỢP ĐỒNG, GIẤY TỜ - KHÔNG BAO GỒM CV)
+    // CV sẽ được upload qua /api/cv/upload
     @PostMapping("/upload")
     public ResponseEntity<?> uploadDocument(
             @RequestParam("type") String documentType,

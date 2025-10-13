@@ -41,6 +41,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/admin/**",
+                                "/api/cv/**",
                                 "/api/documents/**",
                                 "/api/profiles/**",
                                 "/api/interns/**",
@@ -58,7 +59,7 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 // Thêm OAuth2 login
                 .oauth2Login(oauth -> oauth
-                        .loginPage("/oauth2-login") // ⚡ Đổi sang endpoint khác, tránh conflict
+                        .loginPage("/oauth2-login") // Đổi sang endpoint khác, tránh conflict
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler));
 
