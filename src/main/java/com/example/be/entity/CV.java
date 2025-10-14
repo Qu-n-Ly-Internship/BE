@@ -7,61 +7,51 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "intern_documents")
+@Table(name = "cv")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class InternDocument {
+public class CV {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "document_id")
+    @Column(name = "file_id")
     private Long id;
 
-    @Column(name = "document_name", nullable = false)
-    private String documentName;
+    @Column(name = "file_type")
+    private String fileType;
 
-    @Column(name = "document_type")
-    private String documentType;
+    @Column(name = "storage_path", columnDefinition = "TEXT")
+    private String storagePath;
 
-    // Link hoặc chi tiết file trên Cloud
-    @Column(name = "file_detail", columnDefinition = "TEXT")
-    private String fileDetail;
+    @Column(name = "filename")
+    private String filename;
 
-    @Column(name = "uploaded_at")
-    private LocalDateTime uploadedAt;
+    @Column(name = "uploaded_by")
+    private Integer uploadedBy; // user_id của người upload
 
     @Column(name = "status")
     private String status; // PENDING, APPROVED, REJECTED
-
-    @Column(name = "reason")
-    private String rejectionReason; // Lý do từ chối (nếu có)
-
-    @Column(name = "reviewed_at")
-    private LocalDateTime reviewedAt;
-
-
 
     // =======================
     // QUAN HỆ VỚI CÁC ENTITY KHÁC
     // =======================
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "intern_id", nullable = false)
-    @JsonBackReference // tránh vòng lặp kx
+    @JoinColumn(name = "intern_id")
+    @JsonBackReference
     private InternProfile internProfile;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reviewed_by")
-    private User reviewedBy;
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @ManyToOne
     @JoinColumn(name = "hr_id")
     @JsonBackReference
     private Hr hr;
-
 
     // =======================
     // TIỆN ÍCH
@@ -69,9 +59,7 @@ public class InternDocument {
 
     @PrePersist
     protected void onCreate() {
-        if (this.uploadedAt == null) {
-            this.uploadedAt = LocalDateTime.now();
-        }
+        // uploaded_by sẽ được set từ controller
         if (this.status == null) {
             this.status = "PENDING";
         }

@@ -1,4 +1,3 @@
-// Cập nhật DataInitializer.java để tạo roles và permissions mặc định
 package com.example.be.config;
 
 import com.example.be.entity.Permission;
@@ -218,7 +217,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private void createAdminIfNotExist() {
         if (userRepository.findByEmail("admin@company.com").isEmpty()) {
-            Role adminRole = roleRepository.findByName("ADMIN").orElseThrow();
+            Role adminRole = roleRepository.findByName("USER").orElseThrow();
 
             User admin = User.builder()
                     .fullName("Admin")
@@ -228,6 +227,7 @@ public class DataInitializer implements CommandLineRunner {
                     .role(adminRole)
                     .status("ACTIVE")
                     .build();
+            admin.setUsername("admin");
 
             userRepository.save(admin);
             System.out.println("✅ Created admin account: admin@company.com / admin123");
