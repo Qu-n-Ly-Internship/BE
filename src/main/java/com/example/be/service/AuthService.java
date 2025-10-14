@@ -183,7 +183,7 @@ public class AuthService {
                     user.setAuthProvider("GOOGLE");
 
                     // Gán role USER nếu null hoặc không phải USER
-                    if (user.getRole() == null || !user.getRole().getName().equals("USER")) {
+                    if (user.getRole() == null) {
                         user.setRole(defaultRole);
                         System.out.println("🔍 Updated role to USER for existing user: " + email);
                     }
