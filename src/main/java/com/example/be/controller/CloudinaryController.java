@@ -2,7 +2,6 @@ package com.example.be.controller;
 
 import com.example.be.entity.InternDocument;
 import com.example.be.entity.InternProfile;
-import com.example.be.repository.InternDocumentRepository;
 import com.example.be.repository.InternProfileRepository;
 import com.example.be.service.CloudinaryRestService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -21,9 +20,6 @@ public class CloudinaryController {
 
     @Autowired
     private CloudinaryRestService cloudinaryRestService;
-
-    @Autowired
-    private InternDocumentRepository documentRepository;
 
     @Autowired
     private InternProfileRepository internProfileRepository; // 🔹 thêm repo này để lấy internProfile
@@ -57,8 +53,8 @@ public class CloudinaryController {
         doc.setUploadedAt(LocalDateTime.now());
         doc.setStatus("PENDING");
 
-        // 🔹 Lưu vào DB
-        documentRepository.save(doc);
+//        // 🔹 Lưu vào DB
+//        documentRepository.save(doc);
 
         return doc;
     }
