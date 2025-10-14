@@ -1,8 +1,0 @@
-server:
-  port: 8090
-
-cloudinary:
-  cloud_name: dnhofykst
-  api_key: 313484154227452
-  api_secret: _ni9CNZftWNABDSJRtZj_x29WYU
-  upload_preset: ml_default

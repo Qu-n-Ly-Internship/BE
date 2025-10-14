@@ -2,6 +2,7 @@ package com.example.be.controller;
 
 import com.example.be.repository.UserRepository;
 import com.example.be.service.CloudinaryRestService;
+import com.example.be.service.EmailService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -13,13 +14,14 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/cv")
+@RequestMapping("/api/cvs")
 @RequiredArgsConstructor
 public class CVController {
 
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
     private final CloudinaryRestService cloudinaryRestService;
+    private final EmailService emailService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // 1. Lấy tất cả CV với filter
@@ -75,37 +77,36 @@ public class CVController {
                 ));
             }
 
-            // Tìm intern_id từ email
-            String findInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
-            List<Map<String, Object>> internResult = jdbcTemplate.queryForList(findInternSql, email);
-            
-            if (internResult.isEmpty()) {
-                // Không tìm thấy intern_profile với email này
+             // Tìm user_id từ email
+             String findUserSql = "SELECT user_id FROM users WHERE email = ?";
+             List<Map<String, Object>> userResult = jdbcTemplate.queryForList(findUserSql, email);
+             
+             if (userResult.isEmpty()) {
                 return ResponseEntity.ok(Map.of(
                         "success", true,
                         "data", List.of(),
                         "total", 0,
-                        "message", "Không tìm thấy hồ sơ thực tập với email: " + email
+                         "message", "Không tìm thấy user với email: " + email
                 ));
             }
             
-            Long internId = ((Number) internResult.get(0).get("intern_id")).longValue();
+             Long userId = ((Number) userResult.get(0).get("user_id")).longValue();
 
-            // Lấy TẤT CẢ CV của intern
+             // Lấy TẤT CẢ CV của user (cả approved và pending)
             String sql = """
-                SELECT file_id as cv_id, filename, file_type, status, uploaded_by, storage_path
+                 SELECT file_id as cv_id, filename, file_type, status, uploaded_by, storage_path, intern_id
                 FROM cv
-                WHERE intern_id = ?
+                 WHERE user_id = ?
                 ORDER BY file_id DESC
                 """;
 
-            List<Map<String, Object>> cvs = jdbcTemplate.queryForList(sql, internId);
+            List<Map<String, Object>> cvs = jdbcTemplate.queryForList(sql, userId);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "data", cvs,
                     "total", cvs.size(),
-                    "internId", internId
+                    "userId", userId
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -121,12 +122,10 @@ public class CVController {
         try {
             String sql = """
                 SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.storage_path, c.filename,
-                       i.intern_id, i.fullname as intern_name, i.phone,
-                       u.name_uni as university_name
+                        c.user_id, usr.fullname as intern_name, usr.email as intern_email
                 FROM cv c
-                LEFT JOIN intern_profiles i ON c.intern_id = i.intern_id
-                LEFT JOIN universities u ON i.uni_id = u.uni_id
-                WHERE c.status = 'PENDING'
+                 JOIN users usr ON c.user_id = usr.user_id
+                 WHERE c.status = 'PENDING' AND c.intern_id IS NULL
                 ORDER BY c.file_id DESC
                 """;
 
@@ -294,28 +293,11 @@ public class CVController {
                 var user = userOpt.get();
                 userId = user.getId(); // Lấy user_id để lưu vào uploaded_by
                 
-                // Kiểm tra xem user đã có intern_profile chưa
-                String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ? LIMIT 1";
-                try {
-                    finalInternId = jdbcTemplate.queryForObject(checkInternSql, Long.class, uploaderEmail.trim());
-                } catch (Exception ex) {
-                    // Chưa có intern_profile, tạo mới
-                    String insertInternSql = """
-                        INSERT INTO intern_profiles 
-                        (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
-                        VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
-                        """;
-                    jdbcTemplate.update(insertInternSql, user.getFullName(), user.getEmail());
-                    finalInternId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-                }
+                 // Không tạo intern_profile khi upload CV, để NULL
+                 finalInternId = null;
             }
             
-            if (finalInternId == null) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Không thể xác định intern_id. Vui lòng cung cấp internId hoặc uploaderEmail."
-                ));
-            }
+            // finalInternId có thể null - CV sẽ được cấp intern_id khi approve
 
             // Upload file lên Cloudinary
             String fileName = file.getOriginalFilename();
@@ -355,7 +337,287 @@ public class CVController {
         }
     }
 
-    // 8. Duyệt CV
+    // 8. HR initiates CV approval (sets status to ACCEPTING)
+    @PutMapping("/{id}/accept")
+    public ResponseEntity<?> acceptCV(@PathVariable Long id, @RequestBody(required = false) Map<String, String> request) {
+         try {
+             // Check CV exists and get details
+             String checkSql = """
+                 SELECT c.*, u.fullname as intern_name, u.email as intern_email
+                 FROM cv c
+                 JOIN users u ON c.user_id = u.user_id
+                 WHERE c.file_id = ?
+                 """;
+             List<Map<String, Object>> result = jdbcTemplate.queryForList(checkSql, id);
+
+             if (result.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "CV không tồn tại"
+                ));
+            }
+
+             Map<String, Object> cvData = result.get(0);
+             String currentStatus = (String) cvData.get("status");
+             
+             // Only allow ACCEPTING from PENDING status
+             if (!"PENDING".equals(currentStatus)) {
+                 return ResponseEntity.badRequest().body(Map.of(
+                         "success", false,
+                         "message", "CV phải ở trạng thái PENDING để có thể duyệt"
+                 ));
+             }
+
+             // Update status to ACCEPTING
+             String updateSql = "UPDATE cv SET status = 'ACCEPTING' WHERE file_id = ?";
+            jdbcTemplate.update(updateSql, id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "CV đã được đánh dấu duyệt! Bấm xác nhận để hoàn tất.",
+                    "nextStep", "confirm"
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Duyệt CV thất bại: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 8.1. HR confirms CV approval (sets status to APPROVED and sends email)
+    @PutMapping("/{id}/confirm-approve")
+    public ResponseEntity<?> confirmApproveCV(@PathVariable Long id) {
+        try {
+             // Check CV exists and get details
+             String checkSql = """
+                 SELECT c.*, u.fullname as intern_name, u.email as intern_email
+                 FROM cv c
+                 JOIN users u ON c.user_id = u.user_id
+                 WHERE c.file_id = ?
+                 """;
+             List<Map<String, Object>> result = jdbcTemplate.queryForList(checkSql, id);
+
+             if (result.isEmpty()) {
+                 return ResponseEntity.badRequest().body(Map.of(
+                         "success", false,
+                         "message", "CV không tồn tại"
+                 ));
+             }
+
+             Map<String, Object> cvData = result.get(0);
+             String currentStatus = (String) cvData.get("status");
+             
+             // Only allow APPROVED from ACCEPTING status
+             if (!"ACCEPTING".equals(currentStatus)) {
+                 return ResponseEntity.badRequest().body(Map.of(
+                         "success", false,
+                         "message", "CV phải ở trạng thái ACCEPTING để có thể xác nhận duyệt"
+                 ));
+             }
+
+             // Update status to APPROVED and assign intern_id
+             Long userId = ((Number) cvData.get("user_id")).longValue();
+             String userEmail = (String) cvData.get("intern_email");
+             String userName = (String) cvData.get("intern_name");
+             
+             // Get or create intern_id for this user
+             Long internId = null;
+             try {
+                 // Check if user already has intern_profile
+                 String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
+                 internId = jdbcTemplate.queryForObject(checkInternSql, Long.class, userEmail);
+             } catch (Exception ex) {
+                 // Create new intern_profile
+                 String insertInternSql = """
+                     INSERT INTO intern_profiles 
+                     (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
+                     VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
+                     """;
+                 jdbcTemplate.update(insertInternSql, userName, userEmail);
+                 internId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+             }
+             
+             // Update CV with intern_id and APPROVED status
+             String updateSql = "UPDATE cv SET status = 'APPROVED', intern_id = ? WHERE file_id = ?";
+             jdbcTemplate.update(updateSql, internId, id);
+
+            // Send approval email to intern
+            String internEmail = (String) cvData.get("intern_email");
+            String internName = (String) cvData.get("intern_name");
+            String cvFileName = (String) cvData.get("filename");
+            
+            // Debug logging
+            System.out.println("🔍 CV Approval Debug:");
+            System.out.println("  - CV Data: " + cvData);
+            System.out.println("  - Intern Email: " + internEmail);
+            System.out.println("  - Intern Name: " + internName);
+            System.out.println("  - CV File Name: " + cvFileName);
+            
+            if (internEmail != null && !internEmail.trim().isEmpty()) {
+                try {
+                    emailService.sendCVApprovalEmail(internEmail, internName, cvFileName);
+                } catch (Exception emailError) {
+                    System.err.println("Failed to send approval email: " + emailError.getMessage());
+                    // Don't fail the operation if email fails
+                }
+            } else {
+                System.err.println("❌ No intern email found in cvData!");
+                // Try to get email from user table if intern_email is null
+                try {
+                    String fallbackSql = """
+                        SELECT u.email FROM users u 
+                        WHERE u.user_id = ?
+                        """;
+                    List<Map<String, Object>> userResult = jdbcTemplate.queryForList(fallbackSql, userId);
+                    if (!userResult.isEmpty()) {
+                        String fallbackEmail = (String) userResult.get(0).get("email");
+                        System.out.println("🔄 Found fallback email: " + fallbackEmail);
+                        emailService.sendCVApprovalEmail(fallbackEmail, internName, cvFileName);
+                    }
+                } catch (Exception fallbackError) {
+                    System.err.println("Fallback email lookup failed: " + fallbackError.getMessage());
+                }
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "CV đã được duyệt thành công! Email thông báo đã được gửi đến " + internEmail
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Xác nhận duyệt CV thất bại: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 9. HR initiates CV rejection (sets status to REJECTING)
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<?> rejectCV(@PathVariable Long id, @RequestBody(required = false) Map<String, String> request) {
+        try {
+            String rejectionReason = request != null ? request.get("reason") : "";
+            
+             // Check CV exists and get details
+             String checkSql = """
+                 SELECT c.*, u.fullname as intern_name, u.email as intern_email
+                 FROM cv c
+                 JOIN users u ON c.user_id = u.user_id
+                 WHERE c.file_id = ?
+                 """;
+             List<Map<String, Object>> result = jdbcTemplate.queryForList(checkSql, id);
+
+             if (result.isEmpty()) {
+                 return ResponseEntity.badRequest().body(Map.of(
+                         "success", false,
+                         "message", "CV không tồn tại"
+                 ));
+             }
+
+             Map<String, Object> cvData = result.get(0);
+             String currentStatus = (String) cvData.get("status");
+             
+             // Only allow REJECTING from PENDING status
+             if (!"PENDING".equals(currentStatus)) {
+                 return ResponseEntity.badRequest().body(Map.of(
+                         "success", false,
+                         "message", "CV phải ở trạng thái PENDING để có thể từ chối"
+                 ));
+             }
+
+             // Update status to REJECTING and store reason
+             String updateSql = "UPDATE cv SET status = 'REJECTING' WHERE file_id = ?";
+             jdbcTemplate.update(updateSql, id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "CV đã được đánh dấu từ chối! Bấm xác nhận để hoàn tất.",
+                    "nextStep", "confirm",
+                    "reason", rejectionReason
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Từ chối CV thất bại: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 9.1. HR confirms CV rejection (sets status to REJECTED and sends email)
+    @PutMapping("/{id}/confirm-reject")
+    public ResponseEntity<?> confirmRejectCV(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        try {
+            String rejectionReason = request.get("reason");
+            if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Vui lòng nhập lý do từ chối"
+                ));
+            }
+
+             // Check CV exists and get details
+             String checkSql = """
+                 SELECT c.*, u.fullname as intern_name, u.email as intern_email
+                 FROM cv c
+                 JOIN users u ON c.user_id = u.user_id
+                 WHERE c.file_id = ?
+                 """;
+             List<Map<String, Object>> result = jdbcTemplate.queryForList(checkSql, id);
+
+             if (result.isEmpty()) {
+                 return ResponseEntity.badRequest().body(Map.of(
+                         "success", false,
+                         "message", "CV không tồn tại"
+                 ));
+             }
+
+             Map<String, Object> cvData = result.get(0);
+             String currentStatus = (String) cvData.get("status");
+             
+             // Only allow REJECTED from REJECTING status
+             if (!"REJECTING".equals(currentStatus)) {
+                 return ResponseEntity.badRequest().body(Map.of(
+                         "success", false,
+                         "message", "CV phải ở trạng thái REJECTING để có thể xác nhận từ chối"
+                 ));
+             }
+
+             // Update status to REJECTED
+             String updateSql = "UPDATE cv SET status = 'REJECTED' WHERE file_id = ?";
+             jdbcTemplate.update(updateSql, id);
+
+            // Send rejection email to intern
+            String internEmail = (String) cvData.get("intern_email");
+            String internName = (String) cvData.get("intern_name");
+            String cvFileName = (String) cvData.get("filename");
+            
+            if (internEmail != null && !internEmail.trim().isEmpty()) {
+                try {
+                    emailService.sendCVRejectionEmail(internEmail, internName, cvFileName, rejectionReason);
+                } catch (Exception emailError) {
+                    System.err.println("Failed to send rejection email: " + emailError.getMessage());
+                    // Don't fail the operation if email fails
+                }
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "CV đã bị từ chối! Email thông báo đã được gửi đến " + internEmail,
+                    "reason", rejectionReason
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Xác nhận từ chối CV thất bại: " + e.getMessage()
+            ));
+        }
+    }
+
+    // Legacy endpoint for backward compatibility
     @PutMapping("/{id}/approve")
     public ResponseEntity<?> approveCV(@PathVariable Long id) {
         try {
@@ -370,51 +632,19 @@ public class CVController {
                 ));
             }
 
-            // Update status to APPROVED
+            // Update status to APPROVED (legacy behavior)
             String updateSql = "UPDATE cv SET status = 'APPROVED' WHERE file_id = ?";
             jdbcTemplate.update(updateSql, id);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "CV đã được duyệt thành công!"
+                    "message", "CV đã được duyệt thành công! (Legacy endpoint)"
             ));
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Duyệt CV thất bại: " + e.getMessage()
-            ));
-        }
-    }
-
-    // 9. Từ chối CV
-    @PutMapping("/{id}/reject")
-    public ResponseEntity<?> rejectCV(@PathVariable Long id) {
-        try {
-            // Check CV exists
-            String checkSql = "SELECT COUNT(*) FROM cv WHERE file_id = ?";
-            int count = jdbcTemplate.queryForObject(checkSql, Integer.class, id);
-
-            if (count == 0) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "CV không tồn tại"
-                ));
-            }
-
-            // Update status to REJECTED
-            String updateSql = "UPDATE cv SET status = 'REJECTED' WHERE file_id = ?";
-            jdbcTemplate.update(updateSql, id);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "CV đã bị từ chối!"
-            ));
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Từ chối CV thất bại: " + e.getMessage()
             ));
         }
     }
