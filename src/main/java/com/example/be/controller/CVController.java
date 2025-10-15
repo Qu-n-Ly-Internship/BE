@@ -411,6 +411,8 @@ public class CVController {
              
              // Only allow APPROVED from ACCEPTING status
              if (!"ACCEPTING".equals(currentStatus)) {
+                 String updateSql = "UPDATE cv SET status = 'PENDING' WHERE file_id = ?";
+                 jdbcTemplate.update(updateSql, id);
                  return ResponseEntity.badRequest().body(Map.of(
                          "success", false,
                          "message", "CV phải ở trạng thái ACCEPTING để có thể xác nhận duyệt"
@@ -422,26 +424,26 @@ public class CVController {
              String userEmail = (String) cvData.get("intern_email");
              String userName = (String) cvData.get("intern_name");
              
-             // Get or create intern_id for this user
-             Long internId = null;
-             try {
-                 // Check if user already has intern_profile
-                 String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
-                 internId = jdbcTemplate.queryForObject(checkInternSql, Long.class, userEmail);
-             } catch (Exception ex) {
-                 // Create new intern_profile
-                 String insertInternSql = """
-                     INSERT INTO intern_profiles 
-                     (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
-                     VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
-                     """;
-                 jdbcTemplate.update(insertInternSql, userName, userEmail);
-                 internId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-             }
+//             // Get or create intern_id for this user
+//             Long internId = null;
+//             try {
+//                 // Check if user already has intern_profile
+//                 String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
+//                 internId = jdbcTemplate.queryForObject(checkInternSql, Long.class, userEmail);
+//             } catch (Exception ex) {
+//                 // Create new intern_profile
+//                 String insertInternSql = """
+//                     INSERT INTO intern_profiles
+//                     (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
+//                     VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
+//                     """;
+//                 jdbcTemplate.update(insertInternSql, userName, userEmail);
+//                 internId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+//             }
              
              // Update CV with intern_id and APPROVED status
              String updateSql = "UPDATE cv SET status = 'APPROVED', intern_id = ? WHERE file_id = ?";
-             jdbcTemplate.update(updateSql, internId, id);
+             jdbcTemplate.update(updateSql, id);
 
             // Send approval email to intern
             String internEmail = (String) cvData.get("intern_email");
@@ -457,7 +459,15 @@ public class CVController {
             
             if (internEmail != null && !internEmail.trim().isEmpty()) {
                 try {
-                    emailService.sendCVApprovalEmail(internEmail, internName, cvFileName);
+                    emailService.sendEmailFromTemplate(
+                            internEmail,
+                            "CV_APPROVAL",
+                            Map.of(
+                                    "name", internName,
+                                    "filename", cvFileName
+                            )
+                    );
+
                 } catch (Exception emailError) {
                     System.err.println("Failed to send approval email: " + emailError.getMessage());
                     // Don't fail the operation if email fails
@@ -474,7 +484,15 @@ public class CVController {
                     if (!userResult.isEmpty()) {
                         String fallbackEmail = (String) userResult.get(0).get("email");
                         System.out.println("🔄 Found fallback email: " + fallbackEmail);
-                        emailService.sendCVApprovalEmail(fallbackEmail, internName, cvFileName);
+                        emailService.sendEmailFromTemplate(
+                                internEmail,
+                                "CV_APPROVAL",
+                                Map.of(
+                                        "name", internName,
+                                        "filename", cvFileName
+                                )
+                        );
+
                     }
                 } catch (Exception fallbackError) {
                     System.err.println("Fallback email lookup failed: " + fallbackError.getMessage());
@@ -598,7 +616,15 @@ public class CVController {
             
             if (internEmail != null && !internEmail.trim().isEmpty()) {
                 try {
-                    emailService.sendCVRejectionEmail(internEmail, internName, cvFileName, rejectionReason);
+                    emailService.sendEmailFromTemplate(
+                            internEmail,
+                            "CV_REJECTION",
+                            Map.of(
+                                    "name", internName,
+                                    "filename", cvFileName,
+                                    "reason", rejectionReason
+                            )
+                    );
                 } catch (Exception emailError) {
                     System.err.println("Failed to send rejection email: " + emailError.getMessage());
                     // Don't fail the operation if email fails
