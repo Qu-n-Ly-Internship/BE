@@ -552,6 +552,8 @@ public class CVController {
         try {
             String rejectionReason = request.get("reason");
             if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+                String updateSql = "UPDATE cv SET status = 'PENDING' WHERE file_id = ?";
+                jdbcTemplate.update(updateSql, id);
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
                         "message", "Vui lòng nhập lý do từ chối"
