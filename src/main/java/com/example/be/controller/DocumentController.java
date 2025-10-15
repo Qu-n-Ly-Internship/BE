@@ -292,25 +292,14 @@ public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
                 var user = userOpt.get();
                 System.out.println("🔍 Found user: " + user.getEmail() + " - " + user.getFullName());
                 
-                // Kiểm tra xem user đã có intern_profile chưa
+                // Kiểm tra xem user đã có intern_profile chưa (được tạo bởi Admin thủ công)
                 String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ? LIMIT 1";
                 try {
                     finalInternId = jdbcTemplate.queryForObject(checkInternSql, Long.class, uploaderEmail.trim());
                     System.out.println("✅ Found existing intern_profile with ID: " + finalInternId);
                 } catch (Exception ex) {
-                    // Chưa có intern_profile, tạo mới với các giá trị mặc định
-                    System.out.println("📝 Creating new intern_profile for: " + user.getEmail());
-                    String insertInternSql = """
-                        INSERT INTO intern_profiles 
-                        (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
-                        VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
-                        """;
-                    jdbcTemplate.update(insertInternSql, user.getFullName(), user.getEmail());
-                    // Lấy ID vừa tạo
-                    finalInternId = jdbcTemplate.queryForObject(
-                        "SELECT LAST_INSERT_ID()", Long.class
-                    );
-                    System.out.println("✅ Created new intern_profile with ID: " + finalInternId);
+                    // Không tự động tạo intern_profile - Admin phải tạo thủ công
+                    System.out.println("⚠️ User chưa có intern_profile. Admin cần tạo thủ công trong trang 'Thêm thực tập'");
                 }
             }
             
