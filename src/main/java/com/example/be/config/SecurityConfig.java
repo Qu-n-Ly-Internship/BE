@@ -42,6 +42,7 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/api/admin/**",
                                 "/api/cvs/**",
+                                "/api/email/**",
                                 "/api/documents/**",
                                 "/api/profiles/**",
                                 "/api/interns/**",
