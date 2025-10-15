@@ -109,11 +109,15 @@ public class AdminController {
                             "status", user.getStatus()
                     )).toList();
 
-            return ResponseEntity.ok(Map.of(
-                    "content", filteredUsers,
-                    "total", filteredUsers.size(),
-                    "totalPages", 1
-            ));
+        long totalUsers = userRepository.count();
+
+        return ResponseEntity.ok(Map.of(
+            "content", filteredUsers,
+            "total", filteredUsers.size(),
+            "totalPages", 1,
+            // total number of users in the system (for dashboard/summary)
+            "totalUsers", totalUsers
+        ));
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", "Không thể tải danh sách: " + e.getMessage()));
