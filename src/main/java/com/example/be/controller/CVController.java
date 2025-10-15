@@ -419,27 +419,19 @@ public class CVController {
                  ));
              }
 
-             // Update status to APPROVED and assign intern_id
+             // Get intern_id if user already has intern_profile (created by Admin manually)
              Long userId = ((Number) cvData.get("user_id")).longValue();
              String userEmail = (String) cvData.get("intern_email");
-             String userName = (String) cvData.get("intern_name");
              
-//             // Get or create intern_id for this user
-//             Long internId = null;
-//             try {
-//                 // Check if user already has intern_profile
-//                 String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
-//                 internId = jdbcTemplate.queryForObject(checkInternSql, Long.class, userEmail);
-//             } catch (Exception ex) {
-//                 // Create new intern_profile
-//                 String insertInternSql = """
-//                     INSERT INTO intern_profiles
-//                     (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
-//                     VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
-//                     """;
-//                 jdbcTemplate.update(insertInternSql, userName, userEmail);
-//                 internId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-//             }
+             Long internId = null;
+             try {
+                 // Check if user already has intern_profile
+                 String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
+                 internId = jdbcTemplate.queryForObject(checkInternSql, Long.class, userEmail);
+             } catch (Exception ex) {
+                 // Không tự động tạo intern_profile - Admin phải tạo thủ công
+                 System.out.println("⚠️ User chưa có intern_profile. Admin cần tạo thủ công trong trang 'Thêm thực tập'");
+             }
              
              // Update CV with intern_id and APPROVED status
              String updateSql = "UPDATE cv SET status = 'APPROVED', intern_id = ? WHERE file_id = ?";
