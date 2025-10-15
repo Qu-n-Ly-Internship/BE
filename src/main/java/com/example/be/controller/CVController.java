@@ -411,6 +411,8 @@ public class CVController {
              
              // Only allow APPROVED from ACCEPTING status
              if (!"ACCEPTING".equals(currentStatus)) {
+                 String updateSql = "UPDATE cv SET status = 'PENDING' WHERE file_id = ?";
+                 jdbcTemplate.update(updateSql, id);
                  return ResponseEntity.badRequest().body(Map.of(
                          "success", false,
                          "message", "CV phải ở trạng thái ACCEPTING để có thể xác nhận duyệt"
