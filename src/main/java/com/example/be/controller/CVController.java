@@ -424,26 +424,26 @@ public class CVController {
              String userEmail = (String) cvData.get("intern_email");
              String userName = (String) cvData.get("intern_name");
              
-             // Get or create intern_id for this user
-             Long internId = null;
-             try {
-                 // Check if user already has intern_profile
-                 String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
-                 internId = jdbcTemplate.queryForObject(checkInternSql, Long.class, userEmail);
-             } catch (Exception ex) {
-                 // Create new intern_profile
-                 String insertInternSql = """
-                     INSERT INTO intern_profiles 
-                     (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
-                     VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
-                     """;
-                 jdbcTemplate.update(insertInternSql, userName, userEmail);
-                 internId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-             }
+//             // Get or create intern_id for this user
+//             Long internId = null;
+//             try {
+//                 // Check if user already has intern_profile
+//                 String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
+//                 internId = jdbcTemplate.queryForObject(checkInternSql, Long.class, userEmail);
+//             } catch (Exception ex) {
+//                 // Create new intern_profile
+//                 String insertInternSql = """
+//                     INSERT INTO intern_profiles
+//                     (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
+//                     VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
+//                     """;
+//                 jdbcTemplate.update(insertInternSql, userName, userEmail);
+//                 internId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+//             }
              
              // Update CV with intern_id and APPROVED status
              String updateSql = "UPDATE cv SET status = 'APPROVED', intern_id = ? WHERE file_id = ?";
-             jdbcTemplate.update(updateSql, internId, id);
+             jdbcTemplate.update(updateSql, id);
 
             // Send approval email to intern
             String internEmail = (String) cvData.get("intern_email");
