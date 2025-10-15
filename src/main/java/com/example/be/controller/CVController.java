@@ -457,7 +457,15 @@ public class CVController {
             
             if (internEmail != null && !internEmail.trim().isEmpty()) {
                 try {
-                    emailService.sendCVApprovalEmail(internEmail, internName, cvFileName);
+                    emailService.sendEmailFromTemplate(
+                            internEmail,
+                            "CV_APPROVAL",
+                            Map.of(
+                                    "name", internName,
+                                    "filename", cvFileName
+                            )
+                    );
+
                 } catch (Exception emailError) {
                     System.err.println("Failed to send approval email: " + emailError.getMessage());
                     // Don't fail the operation if email fails
@@ -474,7 +482,15 @@ public class CVController {
                     if (!userResult.isEmpty()) {
                         String fallbackEmail = (String) userResult.get(0).get("email");
                         System.out.println("🔄 Found fallback email: " + fallbackEmail);
-                        emailService.sendCVApprovalEmail(fallbackEmail, internName, cvFileName);
+                        emailService.sendEmailFromTemplate(
+                                internEmail,
+                                "CV_APPROVAL",
+                                Map.of(
+                                        "name", internName,
+                                        "filename", cvFileName
+                                )
+                        );
+
                     }
                 } catch (Exception fallbackError) {
                     System.err.println("Fallback email lookup failed: " + fallbackError.getMessage());
@@ -598,7 +614,15 @@ public class CVController {
             
             if (internEmail != null && !internEmail.trim().isEmpty()) {
                 try {
-                    emailService.sendCVRejectionEmail(internEmail, internName, cvFileName, rejectionReason);
+                    emailService.sendEmailFromTemplate(
+                            internEmail,
+                            "CV_REJECTION",
+                            Map.of(
+                                    "name", internName,
+                                    "filename", cvFileName,
+                                    "reason", rejectionReason
+                            )
+                    );
                 } catch (Exception emailError) {
                     System.err.println("Failed to send rejection email: " + emailError.getMessage());
                     // Don't fail the operation if email fails
