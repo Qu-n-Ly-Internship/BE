@@ -1,116 +1,50 @@
 package com.example.be.service;
 
+import com.example.be.entity.Email;
+import com.example.be.repository.EmailRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import jakarta.mail.internet.MimeMessage;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final EmailRepository EmailRepository;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
-
-    /**
-     * Send CV approval notification email to intern
-     */
-    public void sendCVApprovalEmail(String internEmail, String internName, String cvFileName) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(internEmail);
-            message.setSubject("CV Approval Notification - " + cvFileName);
-            
-            String emailContent = buildCVApprovalEmailContent(internName, cvFileName);
-            message.setText(emailContent);
-            
-            mailSender.send(message);
-            System.out.println("✅ CV approval email sent to: " + internEmail);
-        } catch (Exception e) {
-            System.err.println("❌ Failed to send CV approval email to " + internEmail + ": " + e.getMessage());
-            throw new RuntimeException("Failed to send CV approval email", e);
+    private String applyPlaceholders(String template, Map<String, String> values) {
+        String result = template;
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            result = result.replace("{{" + entry.getKey() + "}}", entry.getValue());
         }
+        return result;
     }
 
-    /**
-     * Send CV rejection notification email to intern
-     */
-    public void sendCVRejectionEmail(String internEmail, String internName, String cvFileName, String rejectionReason) {
+    public void sendEmailFromTemplate(String to, String templateCode, Map<String, String> placeholders) {
+        Email template = EmailRepository.findByCode(templateCode)
+                .orElseThrow(() -> new RuntimeException("Template not found: " + templateCode));
+
+        String subject = applyPlaceholders(template.getSubject(), placeholders);
+        String body = applyPlaceholders(template.getBody(), placeholders);
+
+        sendEmail(to, subject, body);
+    }
+
+    private void sendEmail(String to, String subject, String body) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(internEmail);
-            message.setSubject("CV Rejection Notification - " + cvFileName);
-            
-            String emailContent = buildCVRejectionEmailContent(internName, cvFileName, rejectionReason);
-            message.setText(emailContent);
-            
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, false);
             mailSender.send(message);
-            System.out.println("✅ CV rejection email sent to: " + internEmail);
         } catch (Exception e) {
-            System.err.println("❌ Failed to send CV rejection email to " + internEmail + ": " + e.getMessage());
-            throw new RuntimeException("Failed to send CV rejection email", e);
-        }
-    }
-
-
-    private String buildCVApprovalEmailContent(String internName, String cvFileName) {
-        return String.format("""
-            Dear %s,
-            
-            Congratulations! Your CV "%s" has been approved by our HR team.
-            
-            Your CV meets our requirements and you can proceed with the next steps in the application process.
-            
-            If you have any questions, please don't hesitate to contact our HR team.
-            
-            Best regards,
-            HR Team
-            Internship Management System
-            """, internName, cvFileName);
-    }
-
-    private String buildCVRejectionEmailContent(String internName, String cvFileName, String rejectionReason) {
-        return String.format("""
-            Dear %s,
-            
-            Thank you for submitting your CV "%s" for review.
-            
-            Unfortunately, your CV has been rejected for the following reason:
-            %s
-            
-            Please review the feedback and feel free to submit an updated CV.
-            
-            If you have any questions, please don't hesitate to contact our HR team.
-            
-            Best regards,
-            HR Team
-            Internship Management System
-            """, internName, cvFileName, rejectionReason);
-    }
-
-
-
-    /**
-     * Send generic notification email
-     */
-    public void sendGenericNotificationEmail(String to, String subject, String content) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(content);
-            
-            mailSender.send(message);
-            System.out.println("✅ Generic notification email sent to: " + to);
-        } catch (Exception e) {
-            System.err.println("❌ Failed to send generic notification email to " + to + ": " + e.getMessage());
-            throw new RuntimeException("Failed to send generic notification email", e);
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         }
     }
 }
