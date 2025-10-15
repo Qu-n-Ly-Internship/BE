@@ -94,7 +94,7 @@ public class CVController {
 
              // Lấy TẤT CẢ CV của user (cả approved và pending)
             String sql = """
-                 SELECT file_id as cv_id, filename, file_type, status, uploaded_by, storage_path, intern_id
+                 SELECT file_id as cv_id, filename, file_type, status, uploaded_by, upload_at as uploaded_at, storage_path, intern_id
                 FROM cv
                  WHERE user_id = ?
                 ORDER BY file_id DESC
@@ -121,7 +121,7 @@ public class CVController {
     public ResponseEntity<?> getPendingCVs() {
         try {
             String sql = """
-                SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.storage_path, c.filename,
+                SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.upload_at as uploaded_at, c.storage_path, c.filename,
                         c.user_id, usr.fullname as intern_name, usr.email as intern_email
                 FROM cv c
                  JOIN users usr ON c.user_id = usr.user_id
@@ -307,10 +307,10 @@ public class CVController {
             JsonNode json = objectMapper.readTree(cloudinaryResponse);
             String fileUrl = json.get("secure_url").asText(); // URL file trên Cloudinary
 
-            // Insert vào database với user_id vào cột uploaded_by
+            // Insert vào database với user_id vào cột uploaded_by và upload_at
             String insertSql = """
-                INSERT INTO cv (intern_id, user_id, filename, file_type, status, storage_path, uploaded_by)
-                VALUES (?, ?, ?, ?, 'PENDING', ?, ?)
+                INSERT INTO cv (intern_id, user_id, filename, file_type, status, storage_path, uploaded_by, upload_at)
+                VALUES (?, ?, ?, ?, 'PENDING', ?, ?, NOW())
                 """;
             // Note: Bảng cv có primary key là file_id, không phải cv_id
 
