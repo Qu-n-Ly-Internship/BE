@@ -121,7 +121,7 @@ public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
                 FROM intern_documents d
                 LEFT JOIN intern_profiles i ON d.intern_id = i.intern_id
                 LEFT JOIN universities u ON i.uni_id = u.uni_id
-                WHERE d.status = 'PENDING'
+                WHERE d.status = 'PENDING' AND d.document_type NOT IN ('CONTRACT', 'raw')
                 ORDER BY d.uploaded_at ASC
                 """;
 
