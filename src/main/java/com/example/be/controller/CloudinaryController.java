@@ -17,9 +17,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -87,8 +86,8 @@ public class CloudinaryController {
 
 
     // ============================
-// LẤY URL FILE THEO INTERN_ID
-// ============================
+    // LẤY URL FILE THEO INTERN_ID
+    // ============================
     @GetMapping("/get-url/{internId}")
     public ResponseEntity<?> getLatestFileUrlByInternId(@PathVariable Long internId) {
         // Lấy document mới nhất của intern
@@ -142,5 +141,56 @@ public class CloudinaryController {
 
         return ResponseEntity.ok("Hợp đồng đã được xác nhận thành công.");
     }
+
+
+    @GetMapping("/contracts")
+    public ResponseEntity<?> getAllContracts() {
+
+        // 1️⃣ Lấy tất cả interns
+        List<InternProfile> interns = internProfileRepository.findAll();
+
+        // 2️⃣ Lấy document mới nhất mỗi intern
+        List<InternDocument> latestDocs = documentRepository.findLatestDocumentPerIntern();
+
+        // 3️⃣ Map internId → InternDocument
+        Map<Long, InternDocument> docMap = latestDocs.stream()
+                .collect(Collectors.toMap(
+                        d -> d.getInternProfile().getId(),
+                        d -> d
+                ));
+
+        // 4️⃣ Kết hợp dữ liệu
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (InternProfile intern : interns) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("intern_id", intern.getId());
+            data.put("intern_name", intern.getFullName());
+            data.put("university", intern.getUniversity() != null ? intern.getUniversity().getName() : "-");
+
+            InternDocument doc = docMap.get(intern.getId());
+            if (doc != null) {
+                data.put("document_id", doc.getId());
+                data.put("file_name", doc.getDocumentName());
+                data.put("file_url", doc.getFileDetail());
+                data.put("status", doc.getStatus());
+                data.put("uploaded_at", doc.getUploadedAt());
+                data.put("hr_name", doc.getHr() != null ? doc.getHr().getFullname() : "-");
+            } else {
+                // ❌ Nếu intern chưa có hợp đồng
+                data.put("document_id", null);
+                data.put("file_name", "-");
+                data.put("file_url", "-");
+                data.put("status", "Chưa có hợp đồng");
+                data.put("uploaded_at", null);
+                data.put("hr_name", "-");
+            }
+
+            result.add(data);
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
 
 }
