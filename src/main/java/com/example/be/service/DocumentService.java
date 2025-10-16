@@ -48,17 +48,14 @@ public class DocumentService {
         String fileUrl = json.get("secure_url").asText();
         String type = json.get("resource_type").asText();
 
-        // Tìm InternProfile
         InternProfile internProfile = internProfileRepository.findById(internProfileId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy internProfile có ID: " + internProfileId));
 
-        // Tìm HR
-        Hr hr = hrRepository.findById(hrId)
+        Hr hr = hrRepository.findByUser_Id(hrId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy HR có ID: " + hrId));
+                        "Không tìm thấy HR tương ứng với user_id: " + hrId));
 
-        // Tạo mới InternDocument
         InternDocument doc = new InternDocument();
         doc.setInternProfile(internProfile);
         doc.setHr(hr);
@@ -73,10 +70,19 @@ public class DocumentService {
         return documentRepository.save(doc);
     }
 
+
     // ====================================================
     // 2️⃣ LẤY URL FILE MỚI NHẤT THEO INTERN ID
     // ====================================================
-    public Map<String, Object> getLatestFileUrlByInternId(Long internId) {
+    public Map<String, Object> getLatestFileUrlByUserId(Long userId) {
+        // 🔹 Lấy internId thực tế từ userId
+        InternProfile internProfile = internProfileRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy InternProfile cho user ID: " + userId));
+
+        Long internId = internProfile.getId();
+
+        // 🔹 Tìm document mới nhất theo internId
         InternDocument document = documentRepository.findTopByInternProfile_IdOrderByUploadedAtDesc(internId);
 
         if (document == null) {
@@ -84,10 +90,12 @@ public class DocumentService {
                     "Không tìm thấy file cho intern_id: " + internId);
         }
 
+        // 🔹 Lấy thông tin HR (nếu có)
         Hr hr = document.getHr();
         Long hrId = (hr != null) ? hr.getId() : null;
         String hrName = (hr != null) ? hr.getFullname() : null;
 
+        // 🔹 Chuẩn bị response
         Map<String, Object> response = new HashMap<>();
         response.put("document_id", document.getId());
         response.put("hr_id", hrId);
@@ -99,32 +107,44 @@ public class DocumentService {
         return response;
     }
 
+
     // ====================================================
-    // 3️⃣ XÁC NHẬN HỢP ĐỒNG (HR ACCEPT)
+    // 3️⃣ XÁC NHẬN HỢP ĐỒNG
     // ====================================================
-    public String acceptDocument(Long documentId, Long internId) {
+    public String acceptDocument(Long documentId, Long userId) {
         InternDocument doc = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy document với ID: " + documentId));
 
-        // Kiểm tra quyền sở hữu
+        // 🔹 Tìm InternProfile từ user_id
+        InternProfile internProfile = internProfileRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy InternProfile tương ứng với user_id: " + userId));
+
+        Long internId = internProfile.getId(); // 🌟 đây chính là cầu nối từ user_id → intern_id
+
+        // 🔹 Kiểm tra quyền sở hữu
         if (!doc.getInternProfile().getId().equals(internId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Document này không thuộc về intern ID: " + internId);
         }
 
-        // Kiểm tra trạng thái
+        // 🔹 Kiểm tra trạng thái
         if (!"PENDING".equals(doc.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Hợp đồng đã được xử lý rồi!");
         }
 
+        // 🔹 Cập nhật trạng thái
         doc.setStatus("ACCEPTED");
         doc.setReviewedAt(LocalDateTime.now());
         documentRepository.save(doc);
 
         return "Hợp đồng đã được xác nhận thành công.";
     }
+
+
+
 
     // ====================================================
     // 4️⃣ LẤY DANH SÁCH TẤT CẢ HỢP ĐỒNG (HR DASHBOARD)
