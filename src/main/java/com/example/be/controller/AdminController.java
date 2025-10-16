@@ -9,11 +9,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -22,6 +23,7 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final JdbcTemplate jdbcTemplate;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // Tạo user mới với email và password
@@ -88,6 +90,7 @@ public class AdminController {
             @RequestParam(value = "q", defaultValue = "") String query,
             @RequestParam(value = "role", defaultValue = "") String role,
             @RequestParam(value = "status", defaultValue = "") String status,
+            @RequestParam(value = "excludeInternProfiles", defaultValue = "false") boolean excludeInternProfiles,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size
     ) {
@@ -95,12 +98,25 @@ public class AdminController {
             Pageable pageable = PageRequest.of(page, size);
             Page<User> users = userRepository.findAll(pageable);
 
+            // Lấy danh sách email đã có trong intern_profiles (nếu cần lọc)
+            Set<String> existingInternEmails = new HashSet<>();
+            if (excludeInternProfiles && "INTERN".equalsIgnoreCase(role)) {
+                String sql = "SELECT email FROM intern_profiles";
+                List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+                existingInternEmails = results.stream()
+                        .map(r -> (String) r.get("email"))
+                        .collect(Collectors.toSet());
+            }
+            
+            final Set<String> finalExistingEmails = existingInternEmails;
+
             var filteredUsers = users.getContent().stream()
                     .filter(user -> query.isEmpty() ||
                             user.getFullName().toLowerCase().contains(query.toLowerCase()) ||
                             user.getEmail().toLowerCase().contains(query.toLowerCase()))
                     .filter(user -> role.isEmpty() || user.getRole().getName().equalsIgnoreCase(role))
                     .filter(user -> status.isEmpty() || user.getStatus().equalsIgnoreCase(status))
+                    .filter(user -> !excludeInternProfiles || !finalExistingEmails.contains(user.getEmail()))
                     .map(user -> Map.of(
                             "id", user.getId(),
                             "fullName", user.getFullName(),
