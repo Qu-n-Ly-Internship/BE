@@ -379,6 +379,8 @@ public class CVController {
             ));
 
         } catch (Exception e) {
+             String updateSql = "UPDATE cv SET status = 'PENDING' WHERE file_id = ?";
+             jdbcTemplate.update(updateSql, id);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Duyệt CV thất bại: " + e.getMessage()
