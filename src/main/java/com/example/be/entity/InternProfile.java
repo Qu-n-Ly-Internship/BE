@@ -42,4 +42,9 @@ public class InternProfile {
     @ManyToOne
     @JoinColumn(name = "uni_id")
     private University university;
+
+    @OneToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id")
+    private User user;
+
 }

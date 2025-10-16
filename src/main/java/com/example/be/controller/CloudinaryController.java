@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/documents")
 @CrossOrigin("*")
@@ -28,16 +30,20 @@ public class CloudinaryController {
         }
     }
 
-    @GetMapping("/get-url/{internId}")
-    public ResponseEntity<?> getLatestFileUrl(@PathVariable Long internId) {
-        return ResponseEntity.ok(documentService.getLatestFileUrlByInternId(internId));
+    @GetMapping("/get-url/{userId}")
+    public ResponseEntity<?> getLatestFileUrl(@PathVariable Long userId) {
+
+        return ResponseEntity.ok(documentService.getLatestFileUrlByUserId(userId));
     }
 
     @PutMapping("/{documentId}/accept")
     public ResponseEntity<?> acceptDocument(@PathVariable Long documentId,
-                                            @RequestParam Long internId) {
-        return ResponseEntity.ok(documentService.acceptDocument(documentId, internId));
+                                            @RequestBody Map<String, Long> request) {
+        Long userId = request.get("userId");
+        System.out.println(">>> userId nhận được = " + userId);
+        return ResponseEntity.ok(documentService.acceptDocument(documentId, userId));
     }
+
 
     @GetMapping("/contracts")
     public ResponseEntity<?> getAllContracts() {
