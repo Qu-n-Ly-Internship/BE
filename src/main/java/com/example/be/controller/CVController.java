@@ -127,6 +127,8 @@ public class CVController {
             Map<String, Object> result = cvService.acceptCV(id);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+             String updateSql = "UPDATE cv SET status = 'PENDING' WHERE file_id = ?";
+             jdbcTemplate.update(updateSql, id);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Duyệt CV thất bại: " + e.getMessage()

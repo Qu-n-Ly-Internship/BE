@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/oauth2/authorization/**",
                                 "/login/oauth2/**",
                                 "/login/**")
+
                         .permitAll()
                         .anyRequest().authenticated())
                 .formLogin(login -> login.disable())
