@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
+import java.util.Optional;
+
 public interface HrRepository extends JpaRepository<Hr, Long> {
-    @Query(value = "SELECT h.* FROM hrs h WHERE h.user_id = :userId", nativeQuery = true)
-    Optional<Hr> findByUser_Id(@Param("userId") Long userId);
 }
