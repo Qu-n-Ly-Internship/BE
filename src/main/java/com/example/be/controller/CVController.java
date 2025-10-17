@@ -3,6 +3,7 @@ package com.example.be.controller;
 import com.example.be.service.CVService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,6 +15,7 @@ import java.util.Map;
 public class CVController {
 
     private final CVService cvService;
+    private final JdbcTemplate jdbcTemplate;
 
     // 1. Lấy tất cả CV với filter
     @GetMapping("")
@@ -127,8 +129,8 @@ public class CVController {
             Map<String, Object> result = cvService.acceptCV(id);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-             String updateSql = "UPDATE cv SET status = 'PENDING' WHERE file_id = ?";
-             jdbcTemplate.update(updateSql, id);
+            String updateSql = "UPDATE cv SET status = 'PENDING' WHERE file_id = ?";
+            jdbcTemplate.update(updateSql, id);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Duyệt CV thất bại: " + e.getMessage()
