@@ -52,7 +52,7 @@ public class DocumentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy internProfile có ID: " + internProfileId));
 
-        Hr hr = hrRepository.findByUser_Id(userId)
+        Hr hr = hrRepository.findByUser_Id(hrId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy HR tương ứng với user_id: " + hrId));
 
@@ -74,7 +74,7 @@ public class DocumentService {
     // ====================================================
     // 2️⃣ LẤY URL FILE MỚI NHẤT THEO INTERN ID
     // ====================================================
-    public Map<String, Object> getLatestFileUrlByUserId(Long userId) {
+public Map<String, Object> getLatestFileUrlByUserId(Long userId) {
         // 🔹 Lấy internId thực tế từ userId
         InternProfile internProfile = internProfileRepository.findByUser_Id(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -139,7 +139,7 @@ public class DocumentService {
         doc.setStatus("ACCEPTED");
         doc.setReviewedAt(LocalDateTime.now());
         documentRepository.save(doc);
-        return "Hợp đồng đã được xác nhận thành công.";
+return "Hợp đồng đã được xác nhận thành công.";
     }
 
 

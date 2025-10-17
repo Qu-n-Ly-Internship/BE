@@ -47,4 +47,7 @@ public class InternProfile {
     @JoinColumn(name = "user_id", referencedColumnName = "user_id")
     private User user;
 
+    @Column(name = "email")
+    private String email;
+
 }
