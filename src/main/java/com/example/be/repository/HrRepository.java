@@ -10,4 +10,6 @@ import java.util.Optional;
 import java.util.Optional;
 
 public interface HrRepository extends JpaRepository<Hr, Long> {
+
+    Optional<Hr> findByUser_Id(Long userId);
 }

@@ -52,7 +52,7 @@ public class DocumentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy internProfile có ID: " + internProfileId));
 
-        Hr hr = hrRepository.findByUser_Id(userId)
+        Hr hr = hrRepository.findByUser_Id(hrId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy HR tương ứng với user_id: " + hrId));
 
@@ -69,6 +69,7 @@ public class DocumentService {
         // Lưu vào DB
         return documentRepository.save(doc);
     }
+
 
 
     // ====================================================
