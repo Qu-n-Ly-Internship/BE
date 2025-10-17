@@ -1,10 +1,9 @@
 package com.example.be.service;
 
-import com.example.be.entity.Role;
-import com.example.be.entity.User;
-import com.example.be.repository.RoleRepository;
-import com.example.be.repository.UserRepository;
+import com.example.be.entity.*;
+import com.example.be.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,24 +16,37 @@ public class AdminService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final JdbcTemplate jdbcTemplate;
+    @Autowired
+    private HrRepository hrRepository;
+
+    @Autowired
+    private MentorRepository mentorRepository;
+
+    @Autowired
+    private InternProfileRepository internProfileRepository;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public Map<String, Object> createUser(Map<String, String> request) {
         try {
+            // ====== Lấy dữ liệu từ request ======
             String email = request.get("email");
             String password = request.get("password");
             String fullName = request.get("fullName");
-            String roleName = request.get("role") != null ? request.get("role").toUpperCase() : "INTERN";
+            String roleName = request.getOrDefault("role", "INTERN").toUpperCase();
 
+            // ====== Kiểm tra email trùng ======
             if (userRepository.findByEmail(email).isPresent()) {
                 return Map.of("message", "Email đã tồn tại!");
             }
 
+            // ====== Xử lý tên đầy đủ nếu chưa có ======
             if (fullName == null || fullName.trim().isEmpty()) {
                 String emailPrefix = email.split("@")[0];
                 fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
             }
 
+            // ====== Sinh username không trùng ======
             String username = email.split("@")[0];
             String finalUsername = username;
             int suffix = 1;
@@ -43,9 +55,11 @@ public class AdminService {
                 suffix++;
             }
 
+            // ====== Lấy role ======
             Role role = roleRepository.findByName(roleName)
                     .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
 
+            // ====== Khởi tạo User ======
             User user = new User();
             user.setFullName(fullName);
             user.setEmail(email);
@@ -55,17 +69,52 @@ public class AdminService {
             user.setStatus("ACTIVE");
             user.setAuthProvider("LOCAL");
 
+            // ====== Lưu User ======
             User savedUser = userRepository.save(user);
 
+            // ====== Tạo bản ghi phụ thuộc theo role ======
+            createRoleLinkedRecord(savedUser, roleName);
+
+            // ====== Trả kết quả ======
             return Map.of(
-                "id", savedUser.getId(),
-                "fullName", savedUser.getFullName(),
-                "email", savedUser.getEmail(),
-                "role", savedUser.getRole().getName(),
-                "status", savedUser.getStatus()
+                    "id", savedUser.getId(),
+                    "fullName", savedUser.getFullName(),
+                    "email", savedUser.getEmail(),
+                    "username", savedUser.getUsername(),
+                    "role", savedUser.getRole().getName(),
+                    "status", savedUser.getStatus(),
+                    "message", "Tạo tài khoản thành công!"
             );
+
         } catch (Exception e) {
-            throw new RuntimeException("Tạo tài khoản thất bại: " + e.getMessage());
+            throw new RuntimeException("Tạo tài khoản thất bại: " + e.getMessage(), e);
+        }
+    }
+
+    private void createRoleLinkedRecord(User savedUser, String roleName) {
+        switch (roleName) {
+            case "HR" -> {
+                Hr hr = new Hr();
+                hr.setUser(savedUser);
+                hr.setFullname(savedUser.getFullName());
+                hrRepository.save(hr);
+            }
+            case "MENTOR" -> {
+                Mentors mentor = new Mentors();
+                mentor.setUser(savedUser);
+                mentor.setFullName(savedUser.getFullName());
+                mentorRepository.save(mentor);
+            }
+            case "INTERN" -> {
+                InternProfile intern = new InternProfile();
+                intern.setUser(savedUser);
+                intern.setFullName(savedUser.getFullName());
+                intern.setEmail(savedUser.getEmail());
+                internProfileRepository.save(intern);
+            }
+            default -> {
+                // Các role khác không cần tạo bảng liên kết
+            }
         }
     }
 
