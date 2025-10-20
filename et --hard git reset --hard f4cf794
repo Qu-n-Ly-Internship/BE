@@ -1,0 +1,58 @@
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{0}: reset: moving to main
+[33m690196a[m HEAD@{1}: checkout: moving from main to vinh
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{2}: checkout: moving from vinh to main
+[33m690196a[m HEAD@{3}: reset: moving to HEAD
+[33m690196a[m HEAD@{4}: checkout: moving from main to vinh
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{5}: checkout: moving from vinh to main
+[33m690196a[m HEAD@{6}: reset: moving to HEAD
+[33m690196a[m HEAD@{7}: checkout: moving from main to vinh
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{8}: checkout: moving from vinh to main
+[33m690196a[m HEAD@{9}: checkout: moving from main to vinh
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{10}: checkout: moving from vinh to main
+[33m690196a[m HEAD@{11}: checkout: moving from main to vinh
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{12}: reset: moving to HEAD
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{13}: checkout: moving from vinh to main
+[33m690196a[m HEAD@{14}: checkout: moving from main to vinh
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{15}: reset: moving to HEAD
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{16}: checkout: moving from vinh to main
+[33m690196a[m HEAD@{17}: reset: moving to HEAD
+[33m690196a[m HEAD@{18}: checkout: moving from main to vinh
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{19}: checkout: moving from vinh to main
+[33m690196a[m HEAD@{20}: checkout: moving from main to vinh
+[33mf4cf794[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mvinh[m[33m, [m[1;32mmain[m[33m)[m HEAD@{21}: pull origin main: Fast-forward
+[33m4bc0ea2[m HEAD@{22}: pull origin main: Fast-forward
+[33mfcd8d0f[m[33m ([m[1;31morigin/vinh[m[33m)[m HEAD@{23}: checkout: moving from vinh to main
+[33m690196a[m HEAD@{24}: reset: moving to HEAD
+[33m690196a[m HEAD@{25}: checkout: moving from main to vinh
+[33mfcd8d0f[m[33m ([m[1;31morigin/vinh[m[33m)[m HEAD@{26}: pull origin vinh: Fast-forward
+[33m3994b57[m HEAD@{27}: checkout: moving from vinh to main
+[33m690196a[m HEAD@{28}: commit: no message
+[33m01272fb[m HEAD@{29}: commit (merge): Merge branch 'main' of https://github.com/Qu-n-Ly-Internship/BE into vinh
+[33ma582dc3[m HEAD@{30}: commit: .
+[33m8e37c09[m HEAD@{31}: checkout: moving from main to vinh
+[33m3994b57[m HEAD@{32}: pull: Merge made by the 'ort' strategy.
+[33mfd99f3f[m HEAD@{33}: commit: .
+[33m0c444fd[m HEAD@{34}: pull origin main: Merge made by the 'ort' strategy.
+[33m03225aa[m HEAD@{35}: reset: moving to 03225aa
+[33m6bc932e[m HEAD@{36}: checkout: moving from vinh to main
+[33m8e37c09[m HEAD@{37}: pull origin main: Merge made by the 'ort' strategy.
+[33md2c8467[m HEAD@{38}: pull origin vinh: Merge made by the 'ort' strategy.
+[33m03225aa[m HEAD@{39}: commit: sửa upload cloud
+[33md58fde8[m HEAD@{40}: commit: intern accepted hop dong
+[33m337bc3b[m HEAD@{41}: commit: phuong thuc get lay url tu db
+[33m9c2951a[m HEAD@{42}: pull origin main: Fast-forward
+[33mb998bf3[m HEAD@{43}: commit: upload file hop dong
+[33m264addf[m HEAD@{44}: pull origin main: Fast-forward
+[33m6bc932e[m HEAD@{45}: reset: moving to main
+[33ma142983[m HEAD@{46}: commit: test
+[33m6bc932e[m HEAD@{47}: reset: moving to main
+[33md9be780[m HEAD@{48}: reset: moving to HEAD
+[33md9be780[m HEAD@{49}: reset: moving to HEAD
+[33md9be780[m HEAD@{50}: pull origin main: Fast-forward
+[33m40949c2[m HEAD@{51}: reset: moving to HEAD
+[33m40949c2[m HEAD@{52}: pull origin main: Fast-forward
+[33m00070ea[m HEAD@{53}: pull origin main: Fast-forward
+[33m6bc932e[m HEAD@{54}: reset: moving to HEAD
+[33m6bc932e[m HEAD@{55}: checkout: moving from main to vinh
+[33m6bc932e[m HEAD@{56}: pull: Fast-forward
+[33m6cf5e45[m HEAD@{57}: clone: from https://github.com/Qu-n-Ly-Internship/BE

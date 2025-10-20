@@ -49,7 +49,7 @@ public class AuthService {
                 fullName = emailPrefix.substring(0, 1).toUpperCase() + emailPrefix.substring(1);
             }
             user.setFullName(fullName);
-            
+
             // ✅ Set username from email (required field)
             String username = request.getEmail().split("@")[0];
             String finalUsername = username;
@@ -59,7 +59,7 @@ public class AuthService {
                 suffix++;
             }
             user.setUsername(finalUsername);
-            
+
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setStatus("ACTIVE"); //
             user.setAuthProvider("LOCAL"); // Set authProvider
@@ -183,7 +183,7 @@ public class AuthService {
                     user.setAuthProvider("GOOGLE");
 
                     // Gán role USER nếu null hoặc không phải USER
-                    if (user.getRole() == null || !user.getRole().getName().equals("USER")) {
+                    if (user.getRole() == null) {
                         user.setRole(defaultRole);
                         System.out.println("🔍 Updated role to USER for existing user: " + email);
                     }
@@ -192,10 +192,15 @@ public class AuthService {
                 })
                 .orElseGet(() -> {
                     // Tạo mới user nếu chưa tồn tại
+                    Role role = roleRepository.findByName("USER")
+                            .orElseThrow(() -> new RuntimeException("Role mặc định không tồn tại"));
+
+                    // Sinh dummy password (không dùng, nhưng bắt buộc để pass constraint)
                     String dummyPassword = passwordEncoder.encode(UUID.randomUUID().toString());
 
                     User newUser = User.builder()
                             .email(email)
+                            .username("google_" + sub) // tránh trùng username
                             .fullName(name)
                             .password(dummyPassword)
                             .role(defaultRole)

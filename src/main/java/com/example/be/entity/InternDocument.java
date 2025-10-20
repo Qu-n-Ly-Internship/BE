@@ -36,11 +36,10 @@ public class InternDocument {
     @Column(name = "status")
     private String status; // PENDING, APPROVED, REJECTED
 
-    @Column(name = "rejection_reason")
-    private String rejectionReason; // Lý do từ chối (nếu có)
-
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
+
+
 
     // =======================
     // QUAN HỆ VỚI CÁC ENTITY KHÁC

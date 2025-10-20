@@ -4,14 +4,19 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -30,11 +35,14 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {})
+                .cors(cors -> {
+                })
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/admin/**",
+                                "/api/cvs/**",
+                                "/api/email/**",
                                 "/api/documents/**",
                                 "/api/profiles/**",
                                 "/api/interns/**",
@@ -45,35 +53,14 @@ public class SecurityConfig {
                                 "/oauth2/**",
                                 "/oauth2/authorization/**",
                                 "/login/oauth2/**",
-                                "/login/**"
-                        ).permitAll()
+                                "/login/**")
 
-                        // CV endpoints - USER có thể upload, HR có thể approve/reject
-                        // CV endpoints - Tất cả authenticated users có thể upload
-                        .requestMatchers("/api/cvs/upload", "/api/cvs/my").authenticated()
-                        .requestMatchers("/api/cvs/pending", "/api/cvs/all", "/api/cvs/*/approve", "/api/cvs/*/reject")
-                        .hasAnyRole("HR", "ADMIN")
-
-                        // Admin endpoints
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
-                        // Document endpoints
-                        .requestMatchers("/api/documents/**", "/api/intern-documents/**").permitAll()
-
-                        // Profile endpoints
-                        .requestMatchers("/api/profiles/**", "/api/intern-profiles/**").permitAll()
-
-                        // Intern endpoints
-                        .requestMatchers("/api/interns/**").permitAll()
-
-                        // Tất cả request khác cần authentication
-                        .anyRequest().authenticated()
-                )
+                        .permitAll()
+                        .anyRequest().authenticated())
                 .formLogin(login -> login.disable())
                 .httpBasic(basic -> basic.disable())
                 // Thêm OAuth2 login
                 .oauth2Login(oauth -> oauth
-                        .loginPage("/oauth2-login") // ⚡ Đổi sang endpoint khác, tránh conflict
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler));
 

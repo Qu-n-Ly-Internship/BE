@@ -1,307 +1,136 @@
 package com.example.be.controller;
 
-import com.example.be.config.JwtUtil;
-import com.example.be.entity.CV;
-import com.example.be.entity.User;
-import com.example.be.repository.CVRepository;
-import com.example.be.repository.UserRepository;
-import com.example.be.service.EmailService;
+import com.example.be.service.CVService;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/cvs")
 @RequiredArgsConstructor
 public class CVController {
-    private static final Logger logger = LoggerFactory.getLogger(CVController.class);
 
-    private final CVRepository cvRepository;
-    private final UserRepository userRepository;
-    private final EmailService emailService;
-    private final JwtUtil jwtUtil;
+    private final CVService cvService;
+    private final JdbcTemplate jdbcTemplate;
 
-    // Thư mục lưu CV (có thể config trong application.properties)
-    private static final String UPLOAD_DIR = "uploads/cvs/";
-
-    // ==================== USER ENDPOINTS ====================
-
-    /**
-     * User upload CV
-     * Mỗi user chỉ được upload 1 CV
-     */
-    @PostMapping("/upload")
-    public ResponseEntity<?> uploadCV(
-            @RequestParam("file") MultipartFile file,
-            @RequestHeader("Authorization") String bearerToken
+    // 1. Lấy tất cả CV với filter
+    @GetMapping("")
+    public ResponseEntity<?> getAllCVs(
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "q", defaultValue = "") String query
     ) {
         try {
-            // Lấy user hiện tại từ token
-            String email = extractEmailFromToken(bearerToken);
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User không tồn tại!"));
-
-            // Kiểm tra xem user đã upload CV chưa
-            List<CV> existingCVs = cvRepository.findAll().stream()
-                    .filter(cv -> cv.getUserId().equals(user.getId().intValue()))
-                    .collect(Collectors.toList());
-
-            if (!existingCVs.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Bạn đã upload CV rồi! Mỗi user chỉ được upload 1 CV."
-                ));
-            }
-
-            // Validate file
-            if (file.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "File không được để trống!"
-                ));
-            }
-
-            // Kiểm tra kích thước (max 5MB)
-            if (file.getSize() > 5 * 1024 * 1024) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "File không được vượt quá 5MB!"
-                ));
-            }
-
-            // Kiểm tra định dạng file
-            String contentType = file.getContentType();
-            if (!isValidFileType(contentType)) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Chỉ chấp nhận file PDF, DOC, DOCX!"
-                ));
-            }
-
-            // Lưu file vào server
-            String filename = saveFile(file, user.getId());
-
-            // Tạo record CV trong database
-            CV cv = CV.builder()
-                    .userId(user.getId().intValue())
-                    .uploadedBy(user.getId().intValue())
-                    .filename(file.getOriginalFilename())
-                    .storagePath(filename)
-                    .fileType("CV")
-                    .mimeType(contentType)
-                    .size((int) file.getSize())
-                    .status("PENDING")
-                    .uploadedAt(LocalDateTime.now())
-                    .emailSended(false)
-                    .build();
-
-            CV savedCV = cvRepository.save(cv);
-
-            logger.info("✅ User {} uploaded CV successfully. CV ID: {}", email, savedCV.getId());
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Upload CV thành công! Đang chờ HR duyệt.",
-                    "data", Map.of(
-                            "cvId", savedCV.getId(),
-                            "filename", savedCV.getFilename(),
-                            "status", savedCV.getStatus(),
-                            "uploadedAt", savedCV.getUploadedAt()
-                    )
-            ));
-
+            Map<String, Object> result = cvService.getAllCVs(status, query);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            logger.error("❌ Upload CV failed", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Upload thất bại: " + e.getMessage()
+                    "message", "Lỗi khi lấy danh sách CV: " + e.getMessage()
             ));
         }
     }
 
-    /**
-     * User xem CV của mình
-     */
+    // 2. Lấy CV của chính người dùng dựa vào email
     @GetMapping("/my")
-    public ResponseEntity<?> getMyCV(@RequestHeader("Authorization") String bearerToken) {
+    public ResponseEntity<?> getMyCVs(@RequestParam("email") String email) {
         try {
-            String email = extractEmailFromToken(bearerToken);
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User không tồn tại!"));
-
-            List<CV> cvs = cvRepository.findAll().stream()
-                    .filter(cv -> cv.getUserId().equals(user.getId().intValue()))
-                    .collect(Collectors.toList());
-
-            if (cvs.isEmpty()) {
-                return ResponseEntity.ok(Map.of(
-                        "success", true,
-                        "message", "Bạn chưa upload CV",
-                        "data", null
-                ));
-            }
-
-            CV cv = cvs.get(0);
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "data", formatCVResponse(cv)
-            ));
-
+            Map<String, Object> result = cvService.getMyCVs(email);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            logger.error("❌ Get my CV failed", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Lỗi: " + e.getMessage()
+                    "message", "Lỗi khi lấy CV của bạn: " + e.getMessage()
             ));
         }
     }
 
-    // ==================== HR ENDPOINTS ====================
-
-    /**
-     * HR xem tất cả CV đang chờ duyệt
-     */
+    // 3. Lấy CV chờ duyệt
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingCVs() {
         try {
-            List<CV> pendingCVs = cvRepository.findAll().stream()
-                    .filter(cv -> "PENDING".equals(cv.getStatus()))
-                    .sorted(Comparator.comparing(CV::getUploadedAt))
-                    .collect(Collectors.toList());
-
-            List<Map<String, Object>> result = pendingCVs.stream()
-                    .map(this::formatCVResponseWithUser)
-                    .collect(Collectors.toList());
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "data", result,
-                    "total", result.size()
-            ));
-
+            Map<String, Object> result = cvService.getPendingCVs();
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            logger.error("❌ Get pending CVs failed", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Lỗi: " + e.getMessage()
+                    "message", "Lỗi khi lấy CV chờ duyệt: " + e.getMessage()
             ));
         }
     }
 
-    /**
-     * HR xem tất cả CV (có filter)
-     */
-    @GetMapping("/all")
-    public ResponseEntity<?> getAllCVs(
-            @RequestParam(value = "status", required = false) String status
-    ) {
+    // 4. Lấy chi tiết một CV
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getCVById(@PathVariable Long id) {
         try {
-            List<CV> allCVs = cvRepository.findAll();
-
-            // Filter theo status nếu có
-            if (status != null && !status.trim().isEmpty()) {
-                allCVs = allCVs.stream()
-                        .filter(cv -> status.equalsIgnoreCase(cv.getStatus()))
-                        .collect(Collectors.toList());
-            }
-
-            // Sort theo thời gian
-            allCVs.sort(Comparator.comparing(CV::getUploadedAt).reversed());
-
-            List<Map<String, Object>> result = allCVs.stream()
-                    .map(this::formatCVResponseWithUser)
-                    .collect(Collectors.toList());
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "data", result,
-                    "total", result.size()
-            ));
-
+            Map<String, Object> result = cvService.getCVById(id);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            logger.error("❌ Get all CVs failed", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Lỗi: " + e.getMessage()
+                    "message", "Lỗi khi lấy chi tiết CV: " + e.getMessage()
             ));
         }
     }
 
-    /**
-     * HR duyệt CV và gửi email
-     */
-    @PostMapping("/{cvId}/approve")
-    @Transactional
-    public ResponseEntity<?> approveCV(
-            @PathVariable Long cvId,
-            @RequestHeader("Authorization") String bearerToken
+    // 5. Lấy CV theo intern
+    @GetMapping("/intern/{internId}")
+    public ResponseEntity<?> getCVsByIntern(@PathVariable Long internId) {
+        try {
+            Map<String, Object> result = cvService.getCVsByIntern(internId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi khi lấy CV của thực tập sinh: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 6. Thống kê CV theo trạng thái
+    @GetMapping("/stats")
+    public ResponseEntity<?> getCVStats() {
+        try {
+            Map<String, Object> result = cvService.getCVStats();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi khi lấy thống kê: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 7. Upload CV mới
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadCV(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "internId", required = false) Long internId,
+            @RequestParam(value = "uploaderEmail", required = false) String uploaderEmail
     ) {
         try {
-            // Lấy HR hiện tại
-            String hrEmail = extractEmailFromToken(bearerToken);
-            User hr = userRepository.findByEmail(hrEmail)
-                    .orElseThrow(() -> new RuntimeException("HR không tồn tại!"));
-
-            // Lấy CV
-            CV cv = cvRepository.findById(cvId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy CV!"));
-
-            if (!"PENDING".equals(cv.getStatus())) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "CV này đã được xử lý rồi!"
-                ));
-            }
-
-            // Cập nhật status
-            cv.setStatus("APPROVED");
-            cv.setReviewedBy(hr.getId().intValue());
-            cv.setReviewedAt(LocalDateTime.now());
-            cvRepository.save(cv);
-
-            // Lấy thông tin user để gửi email
-            User user = userRepository.findById(cv.getUserId().longValue())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
-
-            // Gửi email
-            try {
-                emailService.sendStatusEmail(
-                        user.getEmail(),
-                        user.getFullName(),
-                        "accepted",  // tag trong email template
-                        null  // không cần lý do khi approve
-                );
-
-                cv.setEmailSended(true);
-                cvRepository.save(cv);
-
-                logger.info("✅ Sent approval email to {}", user.getEmail());
-            } catch (Exception emailEx) {
-                logger.error("❌ Failed to send email", emailEx);
-                // Không rollback transaction, chỉ log lỗi
-            }
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Đã duyệt CV và gửi email thông báo!",
-                    "data", formatCVResponse(cv)
-            ));
-
+            Map<String, Object> result = cvService.uploadCV(file, internId, uploaderEmail);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            logger.error("❌ Approve CV failed", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Tải lên CV thất bại: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 8. HR initiates CV approval (sets status to ACCEPTING)
+    @PutMapping("/{id}/accept")
+    public ResponseEntity<?> acceptCV(@PathVariable Long id, @RequestBody(required = false) Map<String, String> request) {
+        try {
+            Map<String, Object> result = cvService.acceptCV(id);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            String updateSql = "UPDATE cv SET status = 'PENDING' WHERE file_id = ?";
+            jdbcTemplate.update(updateSql, id);
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Duyệt CV thất bại: " + e.getMessage()
@@ -309,78 +138,29 @@ public class CVController {
         }
     }
 
-    /**
-     * HR từ chối CV và gửi email
-     */
-    @PostMapping("/{cvId}/reject")
-    @Transactional
-    public ResponseEntity<?> rejectCV(
-            @PathVariable Long cvId,
-            @RequestBody Map<String, String> request,
-            @RequestHeader("Authorization") String bearerToken
-    ) {
+    // 8.1. HR confirms CV approval (sets status to APPROVED and sends email)
+    @PutMapping("/{id}/confirm-approve")
+    public ResponseEntity<?> confirmApproveCV(@PathVariable Long id) {
         try {
-            String reason = request.get("reason");
-            if (reason == null || reason.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "Vui lòng nhập lý do từ chối!"
-                ));
-            }
-
-            // Lấy HR hiện tại
-            String hrEmail = extractEmailFromToken(bearerToken);
-            User hr = userRepository.findByEmail(hrEmail)
-                    .orElseThrow(() -> new RuntimeException("HR không tồn tại!"));
-
-            // Lấy CV
-            CV cv = cvRepository.findById(cvId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy CV!"));
-
-            if (!"PENDING".equals(cv.getStatus())) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "message", "CV này đã được xử lý rồi!"
-                ));
-            }
-
-            // Cập nhật status
-            cv.setStatus("REJECTED");
-            cv.setRejectionReason(reason.trim());
-            cv.setReviewedBy(hr.getId().intValue());
-            cv.setReviewedAt(LocalDateTime.now());
-            cvRepository.save(cv);
-
-            // Lấy thông tin user để gửi email
-            User user = userRepository.findById(cv.getUserId().longValue())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user!"));
-
-            // Gửi email
-            try {
-                emailService.sendStatusEmail(
-                        user.getEmail(),
-                        user.getFullName(),
-                        "rejected",  // tag trong email template
-                        reason.trim()
-                );
-
-                cv.setEmailSended(true);
-                cvRepository.save(cv);
-
-                logger.info("✅ Sent rejection email to {}", user.getEmail());
-            } catch (Exception emailEx) {
-                logger.error("❌ Failed to send email", emailEx);
-                // Không rollback transaction, chỉ log lỗi
-            }
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Đã từ chối CV và gửi email thông báo!",
-                    "data", formatCVResponse(cv)
-            ));
-
+            Map<String, Object> result = cvService.confirmApproveCV(id);
+            return ResponseEntity.
+                    ok(result);
         } catch (Exception e) {
-            logger.error("❌ Reject CV failed", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Xác nhận duyệt CV thất bại: " + e.getMessage()
+            ));
+        }
+    }
+
+    // 9. HR initiates CV rejection (sets status to REJECTING)
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<?> rejectCV(@PathVariable Long id, @RequestBody(required = false) Map<String, String> request) {
+        try {
+            String reason = request != null ? request.get("reason") : null;
+            Map<String, Object> result = cvService.rejectCV(id, reason);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Từ chối CV thất bại: " + e.getMessage()
@@ -388,73 +168,46 @@ public class CVController {
         }
     }
 
-    // ==================== HELPER METHODS ====================
-
-    private String extractEmailFromToken(String bearerToken) {
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            String token = bearerToken.substring(7);
-            return jwtUtil.extractEmail(token);
+    // 9.1. HR confirms CV rejection (sets status to REJECTED and sends email)
+    @PutMapping("/{id}/confirm-reject")
+    public ResponseEntity<?> confirmRejectCV(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        try {
+            String reason = request.get("reason");
+            Map<String, Object> result = cvService.confirmRejectCV(id, reason);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Xác nhận từ chối CV thất bại: " + e.getMessage()
+            ));
         }
-        throw new RuntimeException("Invalid token format");
     }
 
-    private boolean isValidFileType(String contentType) {
-        return contentType != null && (
-                contentType.equals("application/pdf") ||
-                        contentType.equals("application/msword") ||
-                        contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-        );
+    // Legacy endpoint for backward compatibility
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<?> approveCV(@PathVariable Long id) {
+        try {
+            Map<String, Object> result = cvService.legacyApproveCV(id);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Duyệt CV thất bại: " + e.getMessage()
+            ));
+        }
     }
 
-    private String saveFile(MultipartFile file, Long userId) throws IOException {
-        // Tạo thư mục nếu chưa tồn tại
-        Path uploadPath = Paths.get(UPLOAD_DIR);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
+    // 10. Xóa CV
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteCV(@PathVariable Long id) {
+        try {
+            Map<String, Object> result = cvService.deleteCV(id);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Xóa CV thất bại: " + e.getMessage()
+            ));
         }
-
-        // Tạo tên file unique: userId_timestamp_originalFilename
-        String timestamp = String.valueOf(System.currentTimeMillis());
-        String originalFilename = file.getOriginalFilename();
-        String filename = userId + "_" + timestamp + "_" + originalFilename;
-
-        // Lưu file
-        Path filePath = uploadPath.resolve(filename);
-        Files.copy(file.getInputStream(), filePath);
-
-        return filename;
-    }
-
-    private Map<String, Object> formatCVResponse(CV cv) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("cvId", cv.getId());
-        response.put("filename", cv.getFilename());
-        response.put("fileType", cv.getFileType());
-        response.put("size", cv.getSize());
-        response.put("status", cv.getStatus());
-        response.put("uploadedAt", cv.getUploadedAt());
-        response.put("emailSended", cv.getEmailSended());
-
-        if (cv.getReviewedAt() != null) {
-            response.put("reviewedAt", cv.getReviewedAt());
-        }
-        if (cv.getRejectionReason() != null) {
-            response.put("rejectionReason", cv.getRejectionReason());
-        }
-
-        return response;
-    }
-
-    private Map<String, Object> formatCVResponseWithUser(CV cv) {
-        Map<String, Object> response = formatCVResponse(cv);
-
-        // Thêm thông tin user
-        userRepository.findById(cv.getUserId().longValue()).ifPresent(user -> {
-            response.put("userEmail", user.getEmail());
-            response.put("userFullName", user.getFullName());
-            response.put("userId", user.getId());
-        });
-
-        return response;
     }
 }

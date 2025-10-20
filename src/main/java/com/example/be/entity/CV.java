@@ -1,76 +1,67 @@
 package com.example.be.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "file")
-@Data
+@Table(name = "cv")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class CV {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "file_id")
     private Long id;
 
-    @Column(name = "intern_id")
-    private Integer internId;  // Nullable, set sau khi approve
-
-    @Column(name = "user_id", nullable = false)
-    private Integer userId;  // User gửi CV (sinh viên)
-
     @Column(name = "file_type")
-    private String fileType;  // CV, Resume, etc.
+    private String fileType;
 
-    @Column(name = "storage_path")
-    private String storagePath;  // Đường dẫn lưu file
+    @Column(name = "storage_path", columnDefinition = "TEXT")
+    private String storagePath;
 
     @Column(name = "filename")
-    private String filename;  // Tên file gốc
-
-    @Column(name = "mime_type")
-    private String mimeType;  // application/pdf, etc.
-
-    @Column(name = "size")
-    private Integer size;  // Kích thước file (bytes)
+    private String filename;
 
     @Column(name = "uploaded_by")
-    private Integer uploadedBy;  // FK tới users - người upload
+    private Integer uploadedBy; // user_id của người upload
 
     @Column(name = "status")
-    private String status;  // PENDING, APPROVED, REJECTED
+    private String status; // PENDING, APPROVED, REJECTED
 
-    @Column(name = "uploaded_at")
-    private LocalDateTime uploadedAt;
+    // =======================
+    // QUAN HỆ VỚI CÁC ENTITY KHÁC
+    // =======================
 
-    @Column(name = "email_sended")
-    private Boolean emailSended;  // Đã gửi email chưa
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "intern_id")
+    @JsonBackReference
+    private InternProfile internProfile;
 
-    @Column(name = "rejection_reason")
-    private String rejectionReason;  // Lý do từ chối (nếu REJECTED)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
-    @Column(name = "reviewed_by")
-    private Integer reviewedBy;  // FK tới users - HR duyệt
+    @ManyToOne
+    @JoinColumn(name = "hr_id")
+    @JsonBackReference
+    private Hr hr;
 
-    @Column(name = "reviewed_at")
-    private LocalDateTime reviewedAt;  // Thời gian duyệt
+    // =======================
+    // TIỆN ÍCH
+    // =======================
 
-    // Helper method để lấy thông tin user
-    @Transient
-    public boolean isPending() {
-        return "PENDING".equals(this.status);
-    }
-
-    @Transient
-    public boolean isApproved() {
-        return "APPROVED".equals(this.status);
-    }
-
-    @Transient
-    public boolean isRejected() {
-        return "REJECTED".equals(this.status);
+    @PrePersist
+    protected void onCreate() {
+        // uploaded_by sẽ được set từ controller
+        if (this.status == null) {
+            this.status = "PENDING";
+        }
     }
 }

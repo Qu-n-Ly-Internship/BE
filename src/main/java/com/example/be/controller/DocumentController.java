@@ -64,51 +64,51 @@ public class DocumentController {
 
     // 10. Lấy tài liệu của chính người dùng dựa vào uploaderEmail (không cần schema change)
     @GetMapping("/my")
-public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
-    try {
-        if (email == null || email.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Thiếu tham số email"
-            ));
-        }
+    public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
+        try {
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Thiếu tham số email"
+                ));
+            }
 
-        // Tìm intern_id từ email
-        String findInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
-        List<Map<String, Object>> internResult = jdbcTemplate.queryForList(findInternSql, email);
-        
-        if (internResult.isEmpty()) {
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "data", List.of(),
-                    "total", 0
-            ));
-        }
-        
-        Long internId = ((Number) internResult.get(0).get("intern_id")).longValue();
+            // Tìm intern_id từ email
+            String findInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ?";
+            List<Map<String, Object>> internResult = jdbcTemplate.queryForList(findInternSql, email);
 
-        // Lấy TẤT CẢ documents của intern (bao gồm HR upload)
-        String sql = """
+            if (internResult.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "data", List.of(),
+                        "total", 0
+                ));
+            }
+
+            Long internId = ((Number) internResult.get(0).get("intern_id")).longValue();
+
+            // Lấy TẤT CẢ documents của intern (bao gồm HR upload)
+            String sql = """
             SELECT d.document_id, d.document_name, d.document_type, d.status, d.uploaded_at, d.file_detail, d.rejection_reason
             FROM intern_documents d
             WHERE d.intern_id = ?
             ORDER BY d.uploaded_at DESC
             """;
 
-        List<Map<String, Object>> documents = jdbcTemplate.queryForList(sql, internId);
+            List<Map<String, Object>> documents = jdbcTemplate.queryForList(sql, internId);
 
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "data", documents,
-                "total", documents.size()
-        ));
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Lỗi khi lấy tài liệu của bạn: " + e.getMessage()
-        ));
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", documents,
+                    "total", documents.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi khi lấy tài liệu của bạn: " + e.getMessage()
+            ));
+        }
     }
-}
 
     // 2. Lấy tài liệu chờ duyệt
     @GetMapping("/pending")
@@ -238,7 +238,8 @@ public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
         }
     }
 
-    // 6. Upload tài liệu mới
+    // 6. Upload tài liệu mới (HỢP ĐỒNG, GIẤY TỜ - KHÔNG BAO GỒM CV)
+    // CV sẽ được upload qua /api/cv/upload
     @PostMapping("/upload")
     public ResponseEntity<?> uploadDocument(
             @RequestParam("type") String documentType,
@@ -287,10 +288,10 @@ public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
                             "message", "Không tìm thấy user với email: " + uploaderEmail
                     ));
                 }
-                
+
                 var user = userOpt.get();
                 System.out.println("🔍 Found user: " + user.getEmail() + " - " + user.getFullName());
-                
+
                 // Kiểm tra xem user đã có intern_profile chưa
                 String checkInternSql = "SELECT intern_id FROM intern_profiles WHERE email = ? LIMIT 1";
                 try {
@@ -307,12 +308,12 @@ public ResponseEntity<?> getMyDocuments(@RequestParam("email") String email) {
                     jdbcTemplate.update(insertInternSql, user.getFullName(), user.getEmail());
                     // Lấy ID vừa tạo
                     finalInternId = jdbcTemplate.queryForObject(
-                        "SELECT LAST_INSERT_ID()", Long.class
+                            "SELECT LAST_INSERT_ID()", Long.class
                     );
                     System.out.println("✅ Created new intern_profile with ID: " + finalInternId);
                 }
             }
-            
+
             // Kiểm tra finalInternId không null trước khi insert
             if (finalInternId == null) {
                 return ResponseEntity.badRequest().body(Map.of(

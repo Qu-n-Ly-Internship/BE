@@ -1,85 +1,50 @@
 package com.example.be.service;
 
-import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvValidationException;
-import jakarta.annotation.PostConstruct;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
+import com.example.be.entity.Email;
+import com.example.be.repository.EmailRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.HashMap;
+import jakarta.mail.internet.MimeMessage;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class EmailService {
-    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
     private final JavaMailSender mailSender;
-    private final Map<String, String> emailTemplates = new HashMap<>();
+    private final EmailRepository EmailRepository;
 
-    @Value("${email.template.file}")
-    private Resource templateFile;
-
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
-
-    // ✅ Thêm @PostConstruct để load sau khi Spring inject xong @Value
-    @PostConstruct
-    public void init() {
-        loadTemplatesFromCsv();
-    }
-
-    private void loadTemplatesFromCsv() {
-        try (CSVReader reader = new CSVReader(new InputStreamReader(templateFile.getInputStream()))) {
-            String[] line;
-            reader.readNext(); // skip header
-            while ((line = reader.readNext()) != null) {
-                if (line.length >= 3) {
-                    String tag = line[1].trim();
-                    String value = line[2].trim();
-                    emailTemplates.put(tag, value);
-                }
-            }
-            logger.info("✅ Loaded email templates: {}", emailTemplates);
-        } catch (IOException | CsvValidationException e) {
-            logger.error("❌ Error loading email templates", e);
+    private String applyPlaceholders(String template, Map<String, String> values) {
+        String result = template;
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            result = result.replace("{{" + entry.getKey() + "}}", entry.getValue());
         }
+        return result;
     }
 
-    public void sendStatusEmail(String toEmail, String fullName, String statusTag, String reason) throws MessagingException {
-        String subject = emailTemplates.getOrDefault(statusTag, "Kết quả duyệt hồ sơ");
-        String content = buildEmailContent(fullName, statusTag, reason);
+    public void sendEmailFromTemplate(String to, String templateCode, Map<String, String> placeholders) {
+        Email template = EmailRepository.findByCode(templateCode)
+                .orElseThrow(() -> new RuntimeException("Template not found: " + templateCode));
 
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        helper.setTo(toEmail);
-        helper.setSubject(subject);
-        helper.setText(content, true);
+        String subject = applyPlaceholders(template.getSubject(), placeholders);
+        String body = applyPlaceholders(template.getBody(), placeholders);
 
-        mailSender.send(message);
-        logger.info("📧 Sent email to {} with status {}", toEmail, statusTag);
+        sendEmail(to, subject, body);
     }
 
-    private String buildEmailContent(String fullName, String statusTag, String reason) {
-        String statusValue = emailTemplates.getOrDefault(statusTag, "Không xác định");
-        String body = "<html><body>" +
-                "<p>Kính gửi " + fullName + ",</p>" +
-                "<p>Kết quả duyệt hồ sơ thực tập của bạn: <strong>" + statusValue + "</strong>.</p>";
-        if ("rejected".equalsIgnoreCase(statusTag) && reason != null && !reason.isEmpty()) {
-            body += "<p>Lý do từ chối: " + reason + "</p>";
+    private void sendEmail(String to, String subject, String body) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, false);
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         }
-        body += "<p>Hướng dẫn tiếp theo: [Thêm chi tiết dựa trên status].</p>" +
-                "<p>Trân trọng,</p><p>Đội ngũ HR</p>" +
-                "</body></html>";
-        return body;
     }
 }

@@ -43,6 +43,11 @@ public class InternProfile {
     @JoinColumn(name = "uni_id")
     private University university;
 
-    @Column(name = "email", nullable = true)  // Thêm trường email
+    @OneToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id")
+    private User user;
+
+    @Column(name = "email")
     private String email;
+
 }

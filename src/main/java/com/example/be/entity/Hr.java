@@ -18,6 +18,10 @@ public class Hr {
     @OneToMany(mappedBy = "hr", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InternDocument> internDocuments;
 
+    @OneToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id") // 🔗 liên kết đến User
+    private User user;
+
     // Getters & Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -27,4 +31,7 @@ public class Hr {
 
     public List<InternDocument> getInternDocuments() { return internDocuments; }
     public void setInternDocuments(List<InternDocument> internDocuments) { this.internDocuments = internDocuments; }
+
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 }

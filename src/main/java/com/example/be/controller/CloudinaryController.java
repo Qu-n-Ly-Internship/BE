@@ -1,17 +1,14 @@
 package com.example.be.controller;
 
 import com.example.be.entity.InternDocument;
-import com.example.be.entity.InternProfile;
-import com.example.be.repository.InternProfileRepository;
-import com.example.be.service.CloudinaryRestService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.be.service.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -19,43 +16,37 @@ import java.time.LocalDateTime;
 public class CloudinaryController {
 
     @Autowired
-    private CloudinaryRestService cloudinaryRestService;
-
-    @Autowired
-    private InternProfileRepository internProfileRepository; // 🔹 thêm repo này để lấy internProfile
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private DocumentService documentService;
 
     @PostMapping("/upload_cloud")
-    public InternDocument uploadDocument(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("internProfileId") Long internProfileId // 🔹 nhận từ Postman
-    ) throws IOException {
+    public ResponseEntity<?> uploadDocument(@RequestParam("file") MultipartFile file,
+                                            @RequestParam("internProfileId") Long internProfileId,
+                                            @RequestParam("hrId") Long hrId) {
+        try {
+            InternDocument doc = documentService.uploadDocument(file, internProfileId, hrId);
+            return ResponseEntity.ok(doc);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
 
-        // 🔹 Upload file lên Cloudinary
-        String response = cloudinaryRestService.uploadFile(file);
+    @GetMapping("/get-url/{userId}")
+    public ResponseEntity<?> getLatestFileUrl(@PathVariable Long userId) {
 
-        // 🔹 Parse JSON trả về để lấy URL và type
-        JsonNode json = objectMapper.readTree(response);
-        String fileUrl = json.get("secure_url").asText();
-        String type = json.get("resource_type").asText();
+        return ResponseEntity.ok(documentService.getLatestFileUrlByUserId(userId));
+    }
 
-        // 🔹 Tìm internProfile theo ID (nếu không có thì báo lỗi)
-        InternProfile internProfile = internProfileRepository.findById(internProfileId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy internProfile có ID: " + internProfileId));
+    @PutMapping("/{documentId}/accept")
+    public ResponseEntity<?> acceptDocument(@PathVariable Long documentId,
+                                            @RequestBody Map<String, Long> request) {
+        Long userId = request.get("userId");
+        System.out.println(">>> userId nhận được = " + userId);
+        return ResponseEntity.ok(documentService.acceptDocument(documentId, userId));
+    }
 
-        // 🔹 Tạo document và gán thông tin
-        InternDocument doc = new InternDocument();
-        doc.setInternProfile(internProfile);
-        doc.setDocumentName(file.getOriginalFilename());
-        doc.setDocumentType(type);
-        doc.setFileDetail(fileUrl);
-        doc.setUploadedAt(LocalDateTime.now());
-        doc.setStatus("PENDING");
 
-//        // 🔹 Lưu vào DB
-//        documentRepository.save(doc);
-
-        return doc;
+    @GetMapping("/contracts")
+    public ResponseEntity<?> getAllContracts() {
+        return ResponseEntity.ok(documentService.getAllContracts());
     }
 }
