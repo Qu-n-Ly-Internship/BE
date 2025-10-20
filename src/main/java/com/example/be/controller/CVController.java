@@ -143,7 +143,8 @@ public class CVController {
     public ResponseEntity<?> confirmApproveCV(@PathVariable Long id) {
         try {
             Map<String, Object> result = cvService.confirmApproveCV(id);
-            return ResponseEntity.ok(result);
+            return ResponseEntity.
+                    ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
