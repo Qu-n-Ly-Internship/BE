@@ -1,5 +1,6 @@
 package com.example.be.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.util.List;
 
@@ -15,23 +16,25 @@ public class Hr {
     @Column(name = "fullname", nullable = false)
     private String fullname;
 
-    @OneToMany(mappedBy = "hr", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<InternDocument> internDocuments;
-
     @OneToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "user_id") // 🔗 liên kết đến User
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id")
     private User user;
 
-    // Getters & Setters
+    // ✅ Liên kết 1-n với Program (được serialize ra JSON)
+    @OneToMany(mappedBy = "hr", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<Program> programs;
+
+    // --- Getters & Setters ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getFullname() { return fullname; }
     public void setFullname(String fullname) { this.fullname = fullname; }
 
-    public List<InternDocument> getInternDocuments() { return internDocuments; }
-    public void setInternDocuments(List<InternDocument> internDocuments) { this.internDocuments = internDocuments; }
-
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+
+    public List<Program> getPrograms() { return programs; }
+    public void setPrograms(List<Program> programs) { this.programs = programs; }
 }
