@@ -113,55 +113,68 @@ public class AdminService {
                 internProfileRepository.save(intern);
             }
             default -> {
-                // Các role khác không cần tạo bảng liên kết
+
             }
         }
     }
 
     public Map<String, Object> getUsers(String query, String role, String status,
-            boolean excludeInternProfiles, int page, int size) {
+                                        boolean excludeInternProfiles, int page, int size) {
         try {
             List<Object> params = new ArrayList<>();
-            StringBuilder sql = new StringBuilder("""
-                SELECT u.user_id as id, u.fullname as fullName, u.email, u.status,
-                       r.name as role
-                FROM users u
-                JOIN roles r ON u.role_id = r.role_id
-                WHERE 1=1
-                """);
+            List<Object> countParams = new ArrayList<>();
+
+            String baseSql = """
+            FROM users u
+            JOIN roles r ON u.role_id = r.role_id
+            WHERE 1=1
+        """;
+
+            StringBuilder condition = new StringBuilder();
 
             if (query != null && !query.isEmpty()) {
-                sql.append(" AND (u.fullname LIKE ? OR u.email LIKE ?)");
+                condition.append(" AND (u.fullname LIKE ? OR u.email LIKE ?)");
                 String pattern = "%" + query + "%";
-                params.add(pattern);
-                params.add(pattern);
+                params.add(pattern); params.add(pattern);
+                countParams.add(pattern); countParams.add(pattern);
             }
 
             if (role != null && !role.isEmpty()) {
-                sql.append(" AND r.name = ?");
+                condition.append(" AND r.name = ?");
                 params.add(role);
+                countParams.add(role);
             }
 
             if (status != null && !status.isEmpty()) {
-                sql.append(" AND u.status = ?");
+                condition.append(" AND u.status = ?");
                 params.add(status);
+                countParams.add(status);
             }
 
             if (excludeInternProfiles && "INTERN".equalsIgnoreCase(role)) {
-                sql.append(" AND u.email NOT IN (SELECT email FROM intern_profiles)");
+                condition.append(" AND u.email NOT IN (SELECT email FROM intern_profiles)");
             }
 
-            sql.append(" ORDER BY u.fullname LIMIT ? OFFSET ?");
+            // --- Truy vấn dữ liệu phân trang ---
+            String sql = """
+            SELECT u.user_id AS id, u.fullname AS fullName, u.email, u.status, r.name AS role
+        """ + baseSql + condition + " ORDER BY u.fullname LIMIT ? OFFSET ?";
+
             params.add(size);
             params.add(page * size);
 
-            List<Map<String, Object>> users = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+            List<Map<String, Object>> users = jdbcTemplate.queryForList(sql, params.toArray());
+
+            // --- Truy vấn tổng số bản ghi ---
+            String countSql = "SELECT COUNT(*) " + baseSql + condition;
+            int total = jdbcTemplate.queryForObject(countSql, countParams.toArray(), Integer.class);
+            int totalPages = (int) Math.ceil((double) total / size);
 
             return Map.of(
-                "content", users,
-                "total", users.size(),
-                "totalPages", 1,
-                "totalUsers", userRepository.count()
+                    "content", users,
+                    "total", total,
+                    "totalPages", totalPages,
+                    "totalUsers", total
             );
         } catch (Exception e) {
             throw new RuntimeException("Không thể tải danh sách: " + e.getMessage());
