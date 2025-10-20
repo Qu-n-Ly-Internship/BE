@@ -51,6 +51,7 @@ public class SecurityConfig {
                                 "/api/internships/**",
                                 "/api/profile/**",
                                 "/oauth2/**",
+                                "/api/allowances/**",
                                 "/oauth2/authorization/**",
                                 "/login/oauth2/**",
                                 "/login/**")

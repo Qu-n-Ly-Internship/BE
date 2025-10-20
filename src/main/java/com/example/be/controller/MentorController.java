@@ -1,5 +1,8 @@
 package com.example.be.controller;
 
+import com.example.be.entity.User;
+import com.example.be.repository.UserRepository;
+import com.example.be.service.JwtService;
 import com.example.be.service.MentorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +16,8 @@ import java.util.Map;
 public class MentorController {
 
     private final MentorService mentorService;
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     // 1. Lấy danh sách tất cả mentor (users có role MENTOR hoặc HR)
     @GetMapping("")
@@ -141,6 +146,148 @@ public class MentorController {
         try {
             Map<String, Object> result = mentorService.getMentorStats();
             return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    // ==================== API MỚI: CHO MENTOR ====================
+
+    // 10. Mentor xem danh sách thực tập sinh của chính mình
+    @GetMapping("/my-interns")
+    public ResponseEntity<?> getMyInterns(@RequestHeader("Authorization") String bearerToken) {
+        try {
+            String token = bearerToken.replace("Bearer ", "");
+            String email = jwtService.extractUsername(token);
+
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Long mentorId = user.getId();
+            Map<String, Object> result = mentorService.getInternsByMentor(mentorId);
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    // 11. Mentor xem thống kê cá nhân
+    @GetMapping("/my-stats")
+    public ResponseEntity<?> getMyStats(@RequestHeader("Authorization") String bearerToken) {
+        try {
+            String token = bearerToken.replace("Bearer ", "");
+            String email = jwtService.extractUsername(token);
+
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Long mentorId = user.getId();
+            Map<String, Object> result = mentorService.getMentorPersonalStats(mentorId);
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    // ==================== API MỚI: CHO ADMIN/HR ====================
+
+    // 12. Admin/HR xem chi tiết thực tập sinh của 1 mentor cụ thể
+    @GetMapping("/mentor/{mentorId}/interns")
+    public ResponseEntity<?> getInternsByMentorId(
+            @PathVariable Long mentorId,
+            @RequestHeader("Authorization") String bearerToken
+    ) {
+        try {
+            // Kiểm tra quyền ADMIN/HR
+            String token = bearerToken.replace("Bearer ", "");
+            String email = jwtService.extractUsername(token);
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            String roleName = user.getRole().getName();
+            if (!"ADMIN".equals(roleName) && !"HR".equals(roleName)) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "success", false,
+                        "message", "Không có quyền truy cập!"
+                ));
+            }
+
+            Map<String, Object> result = mentorService.getDetailedInternsByMentor(mentorId);
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    // 13. Admin/HR xem tổng quan tất cả mentor
+    @GetMapping("/overview")
+    public ResponseEntity<?> getMentorOverview(
+            @RequestHeader("Authorization") String bearerToken
+    ) {
+        try {
+            // Kiểm tra quyền ADMIN/HR
+            String token = bearerToken.replace("Bearer ", "");
+            String email = jwtService.extractUsername(token);
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            String roleName = user.getRole().getName();
+            if (!"ADMIN".equals(roleName) && !"HR".equals(roleName)) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "success", false,
+                        "message", "Không có quyền truy cập!"
+                ));
+            }
+
+            Map<String, Object> result = mentorService.getMentorOverview();
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    // 14. Admin/HR xem phân bố workload
+    @GetMapping("/workload-distribution")
+    public ResponseEntity<?> getWorkloadDistribution(
+            @RequestHeader("Authorization") String bearerToken
+    ) {
+        try {
+            // Kiểm tra quyền ADMIN/HR
+            String token = bearerToken.replace("Bearer ", "");
+            String email = jwtService.extractUsername(token);
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            String roleName = user.getRole().getName();
+            if (!"ADMIN".equals(roleName) && !"HR".equals(roleName)) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "success", false,
+                        "message", "Không có quyền truy cập!"
+                ));
+            }
+
+            Map<String, Object> result = mentorService.getWorkloadDistribution();
+            return ResponseEntity.ok(result);
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
