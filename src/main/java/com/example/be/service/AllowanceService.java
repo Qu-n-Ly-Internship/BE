@@ -443,32 +443,6 @@ public class AllowanceService {
         }
     }
 
-//    // Từ chối phụ cấp (hoàn trả)
-//    public Map<String, Object> rejectAllowance(Long id, Map<String, String> request) {
-//        try {
-//            AllowancePayment allowance = allowanceRepository.findById(id)
-//                    .orElseThrow(() -> new RuntimeException("Không tìm thấy phụ cấp với ID: " + id));
-//
-//            if (allowance.getPaidAt() != null) {
-//                throw new IllegalStateException("Không thể từ chối phụ cấp đã thanh toán");
-//            }
-//
-//            String reason = request.getOrDefault("reason", "");
-//            allowance.setNote("REJECTED - " + reason);
-//            AllowancePayment saved = allowanceRepository.save(allowance);
-//
-//            return Map.of(
-//                    "success", true,
-//                    "message", "Phụ cấp đã bị từ chối",
-//                    "data", Map.of(
-//                            "allowanceId", saved.getId(),
-//                            "reason", reason
-//                    )
-//            );
-//        } catch (Exception e) {
-//            throw new RuntimeException("Từ chối phụ cấp thất bại: " + e.getMessage());
-//        }
-//    }
 
     // Tìm kiếm phụ cấp
     public Map<String, Object> searchAllowances(String keyword, int page, int size) {
