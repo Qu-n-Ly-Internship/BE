@@ -23,7 +23,7 @@ public class Mentors {
     private String fullName;
 
     @Column(name = "department_id")
-    private Long departmentId; // có thể null, đúng với cột bạn có trong DB
+    private Long departmentId;
 
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)

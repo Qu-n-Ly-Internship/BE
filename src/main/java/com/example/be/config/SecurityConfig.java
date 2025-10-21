@@ -50,6 +50,8 @@ public class SecurityConfig {
                                 "/api/mentors/**",
                                 "/api/internships/**",
                                 "/api/profile/**",
+                                "/api/programs/**",
+                                "/api/departments/**",
                                 "/oauth2/**",
                                 "/api/allowances/**",
                                 "/oauth2/authorization/**",
