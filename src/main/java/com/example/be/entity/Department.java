@@ -1,5 +1,6 @@
 package com.example.be.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -18,7 +19,13 @@ public class Department {
     private Integer capacity;
 
     @Column(name = "program_id")
-    private Long programId; // chỉ lưu FK, không ánh xạ object
+    private Long programId;
+
+    // ✅ Người tạo (HR)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "create_by_hr")
+    @JsonBackReference
+    private Hr hr;
 
     // --- Getter & Setter ---
     public Long getId() { return id; }

@@ -31,7 +31,7 @@ public class Program {
     // ✅ Người tạo (HR)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hr_id")
-    @JsonBackReference  // Ngăn vòng lặp khi serialize JSON
+    @JsonBackReference
     private Hr hr;
 
     // ✅ Thời điểm tạo (tự động set)
@@ -65,6 +65,12 @@ public class Program {
 
     public Hr getHr() { return hr; }
     public void setHr(Hr hr) { this.hr = hr; }
+
+    @Transient
+    public Long getHrId() {
+        return hr != null ? hr.getId() : null;
+    }
+
 
     public Date getUploadedAt() { return uploadedAt; }
     public void setUploadedAt(Date uploadedAt) { this.uploadedAt = uploadedAt; }

@@ -1,5 +1,6 @@
 package com.example.be.service;
 
+import com.example.be.dto.ProgramRequest;
 import com.example.be.entity.Hr;
 import com.example.be.entity.Program;
 import com.example.be.repository.HrRepository;
@@ -16,14 +17,21 @@ public class ProgramService {
 
     private final ProgramRepository programRepository;
     private final HrRepository hrRepository;
+    private final HrContextService hrContextService;
 
-    public ProgramService(ProgramRepository programRepository, HrRepository hrRepository) {
+
+    public ProgramService(
+            ProgramRepository programRepository,
+            HrRepository hrRepository,
+            HrContextService hrContextService
+    ) {
         this.programRepository = programRepository;
         this.hrRepository = hrRepository;
+        this.hrContextService = hrContextService;
     }
 
-    // ✅ HR tạo program mới → tự động lưu thời gian tạo (uploadedAt)
-    public Program createProgram(Program program, Long hrId) {
+    public Program createProgram(Program program, Long userId) {
+        Long hrId = hrContextService.getHrIdFromUserId(userId);
         Hr hr = hrRepository.findById(hrId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy HR với id = " + hrId));
 
@@ -36,9 +44,20 @@ public class ProgramService {
         return programRepository.save(program);
     }
 
-    public List<Program> getAllPrograms() {
-        return programRepository.findAll();
+    public List<ProgramRequest> getAllPrograms() {
+        return programRepository.findAll().stream()
+                .map(p -> new ProgramRequest(
+                        p.getId(),
+                        p.getProgramName(),
+                        p.getDescription(),
+                        p.getHr() != null ? p.getHr().getId() : null,
+                        p.getHr() != null ? p.getHr().getFullname() : null,
+                        p.getDateCreate(),
+                        p.getDateEnd()
+                ))
+                .toList();
     }
+
 
     public Program getProgramById(Long id) {
         return programRepository.findById(id)
@@ -48,13 +67,34 @@ public class ProgramService {
     public Program updateProgram(Long id, Program updatedProgram) {
         Program existing = getProgramById(id);
 
-        existing.setProgramName(updatedProgram.getProgramName());
+        // ✅ Validate dữ liệu đầu vào
+        if (updatedProgram.getProgramName() == null || updatedProgram.getProgramName().trim().isEmpty()) {
+            throw new RuntimeException("Tên chương trình không được để trống!");
+        }
+
+        if (updatedProgram.getDateCreate() == null) {
+            throw new RuntimeException("Ngày bắt đầu không được để trống!");
+        }
+
+        if (updatedProgram.getDateEnd() == null) {
+            throw new RuntimeException("Ngày kết thúc không được để trống!");
+        }
+
+        if (updatedProgram.getDateEnd().before(updatedProgram.getDateCreate())) {
+            throw new RuntimeException("Ngày kết thúc phải sau  ngày bắt đầu!");
+        }
+
+        // ✅ Cập nhật dữ liệu
+        existing.setProgramName(updatedProgram.getProgramName().trim());
         existing.setDateCreate(updatedProgram.getDateCreate());
         existing.setDateEnd(updatedProgram.getDateEnd());
-        existing.setDescription(updatedProgram.getDescription());
+        existing.setDescription(
+                updatedProgram.getDescription() != null ? updatedProgram.getDescription().trim() : null
+        );
 
         return programRepository.save(existing);
     }
+
 
     public void deleteProgram(Long id) {
         if (!programRepository.existsById(id)) {
