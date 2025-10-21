@@ -19,7 +19,7 @@ public class ProgramController {
     }
 
     // ✅ HR tạo chương trình
-    @PostMapping("/create")
+    @PostMapping
     public ResponseEntity<?> createProgram(@RequestBody ProgramRequest request) {
         try {
             Program program = new Program();
@@ -35,13 +35,11 @@ public class ProgramController {
         }
     }
 
-    // ✅ Lấy tất cả
     @GetMapping
-    public ResponseEntity<List<Program>> getAll() {
-        return ResponseEntity.ok(programService.getAllPrograms());
+    public List<ProgramRequest> getAllPrograms() {
+        return programService.getAllPrograms();
     }
 
-    // ✅ Lấy theo id
     @GetMapping("/{id}")
     public ResponseEntity<Program> getById(@PathVariable Long id) {
         return ResponseEntity.ok(programService.getProgramById(id));
