@@ -119,36 +119,19 @@ public class MentorService {
                 return Map.of("success", false, "message", "Mentor không tồn tại");
             }
 
-            String checkInternSql = "SELECT COUNT(*) FROM intern_profiles WHERE intern_id = ?";
-            int internCount = jdbcTemplate.queryForObject(checkInternSql, Integer.class, internId);
-            if (internCount == 0) {
-                return Map.of("success", false, "message", "Thực tập sinh không tồn tại");
+            // Lấy program_id từ intern_profiles
+            String getProgramSql = "SELECT program_id FROM intern_profiles WHERE intern_id = ?";
+            Integer programId = jdbcTemplate.queryForObject(getProgramSql, Integer.class, internId);
+            
+            if (programId == null) {
+                return Map.of("success", false, "message", "Thực tập sinh chưa có chương trình thực tập");
             }
 
-            String checkAssignmentSql = """
-                SELECT COUNT(*) FROM mentor_assignments 
-                WHERE mentor_id = ? AND intern_id = ?
-                """;
-            int assignmentCount = jdbcTemplate.queryForObject(checkAssignmentSql, Integer.class, mentorId, internId);
+            // Cập nhật mentor_id vào intern_programs
+            String updateProgramSql = "UPDATE intern_programs SET mentor_id = ? WHERE program_id = ?";
+            jdbcTemplate.update(updateProgramSql, mentorId, programId);
 
-            if (assignmentCount > 0) {
-                String updateSql = """
-                    UPDATE mentor_assignments 
-                    SET department_id = ?, start_date = COALESCE(?, start_date, NOW())
-                    WHERE mentor_id = ? AND intern_id = ?
-                    """;
-                jdbcTemplate.update(updateSql, departmentId, startDate, mentorId, internId);
-
-                return Map.of("success", true, "message", "Cập nhật phân công mentor thành công!");
-            } else {
-                String insertSql = """
-                    INSERT INTO mentor_assignments (mentor_id, intern_id, department_id, start_date)
-                    VALUES (?, ?, ?, COALESCE(?, NOW()))
-                    """;
-                jdbcTemplate.update(insertSql, mentorId, internId, departmentId, startDate);
-
-                return Map.of("success", true, "message", "Phân công mentor thành công!");
-            }
+            return Map.of("success", true, "message", "Phân công mentor thành công!");
 
         } catch (Exception e) {
             throw new RuntimeException("Phân công thất bại: " + e.getMessage(), e);
@@ -248,27 +231,25 @@ public class MentorService {
     public Map<String, Object> getAllAssignments(Long mentorId) {
         try {
             StringBuilder sql = new StringBuilder("""
-                SELECT ma.mentor_id, ma.intern_id, ma.start_date,
+                SELECT prog.mentor_id, ip.intern_id, prog.start_date,
                        u.fullname as mentor_name, u.email as mentor_email,
-                       i.fullname as intern_name, i.phone as intern_phone,
-                       uni.name_uni as university_name,
-                       d.name_department as department_name
-                FROM mentor_assignments ma
-                JOIN users u ON ma.mentor_id = u.user_id
-                JOIN intern_profiles i ON ma.intern_id = i.intern_id
-                LEFT JOIN universities uni ON i.uni_id = uni.uni_id
-                LEFT JOIN department d ON ma.department_id = d.department_id
-                WHERE 1=1
+                       ip.fullname as intern_name, ip.phone as intern_phone,
+                       uni.name_uni as university_name
+                FROM intern_profiles ip
+                JOIN intern_programs prog ON ip.program_id = prog.program_id
+                LEFT JOIN users u ON prog.mentor_id = u.user_id
+                LEFT JOIN universities uni ON ip.uni_id = uni.uni_id
+                WHERE prog.mentor_id IS NOT NULL
                 """);
 
             List<Object> params = new ArrayList<>();
 
             if (mentorId != null) {
-                sql.append(" AND ma.mentor_id = ?");
+                sql.append(" AND prog.mentor_id = ?");
                 params.add(mentorId);
             }
 
-            sql.append(" ORDER BY ma.start_date DESC");
+            sql.append(" ORDER BY prog.start_date DESC");
 
             List<Map<String, Object>> assignments = jdbcTemplate.queryForList(sql.toString(), params.toArray());
 
@@ -281,8 +262,17 @@ public class MentorService {
 
     public Map<String, Object> unassignMentor(Long mentorId, Long internId) {
         try {
-            String sql = "DELETE FROM mentor_assignments WHERE mentor_id = ? AND intern_id = ?";
-            int affected = jdbcTemplate.update(sql, mentorId, internId);
+            // Lấy program_id từ intern_profiles
+            String getProgramSql = "SELECT program_id FROM intern_profiles WHERE intern_id = ?";
+            Integer programId = jdbcTemplate.queryForObject(getProgramSql, Integer.class, internId);
+            
+            if (programId == null) {
+                return Map.of("success", false, "message", "Không tìm thấy thực tập sinh");
+            }
+
+            // Set mentor_id = NULL trong intern_programs
+            String updateSql = "UPDATE intern_programs SET mentor_id = NULL WHERE program_id = ? AND mentor_id = ?";
+            int affected = jdbcTemplate.update(updateSql, programId, mentorId);
 
             if (affected == 0) {
                 return Map.of("success", false, "message", "Không tìm thấy phân công này");

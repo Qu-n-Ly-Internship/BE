@@ -22,13 +22,15 @@ public class InternProfileService {
     public Map<String, Object> getAllProfiles(String query, String school, String major, String status, int page, int size) {
         try {
             StringBuilder sql = new StringBuilder("""
-                SELECT ip.intern_id, ip.fullname as student, ip.email as studentEmail,
+                SELECT ip.intern_id as intern_id, ip.fullname as student, ip.email as studentEmail,
                        u.name_uni as school, ip.major_id, ip.year_of_study,
                        ip.phone, ip.available_from as startDate, ip.end_date as endDate,
-                       p.title, ip.status
+                       p.title, ip.status,
+                       mentor.fullname as mentor_name, p.mentor_id
                 FROM intern_profiles ip
                 LEFT JOIN universities u ON ip.uni_id = u.uni_id
                 LEFT JOIN intern_programs p ON ip.program_id = p.program_id
+                LEFT JOIN users mentor ON p.mentor_id = mentor.user_id
                 WHERE 1=1
                 """);
 

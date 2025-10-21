@@ -15,7 +15,7 @@ public class AllowanceController {
 
     private final AllowanceService allowanceService;
 
-    // Lấy danh sách phụ cấp với filter
+    // 1.Lấy danh sách phụ cấp với filter
     @GetMapping("")
     public ResponseEntity<?> getAllAllowances(
             @RequestParam(value = "internId", required = false) String internId,
@@ -35,7 +35,7 @@ public class AllowanceController {
         }
     }
 
-    // Lấy chi tiết một phụ cấp
+    // 2.Lấy chi tiết một phụ cấp
     @GetMapping("/{id}")
     public ResponseEntity<?> getAllowanceById(@PathVariable Long id) {
         try {
@@ -49,7 +49,7 @@ public class AllowanceController {
         }
     }
 
-    // Tạo phụ cấp mới
+    // 3.Tạo phụ cấp mới
     @PostMapping("")
     public ResponseEntity<?> createAllowance(@RequestBody Map<String, Object> request) {
         try {
@@ -63,7 +63,7 @@ public class AllowanceController {
         }
     }
 
-    // Cập nhật phụ cấp
+    // 4.Cập nhật phụ cấp
     @PutMapping("/{id}")
     public ResponseEntity<?> updateAllowance(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
@@ -77,7 +77,7 @@ public class AllowanceController {
         }
     }
 
-    // Xóa phụ cấp
+    // 5.Xóa phụ cấp
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteAllowance(@PathVariable Long id) {
         try {
@@ -91,7 +91,7 @@ public class AllowanceController {
         }
     }
 
-    // Duyệt/thanh toán phụ cấp
+    // 6.Duyệt/thanh toán phụ cấp
     @PutMapping("/{id}/approve")
     public ResponseEntity<?> approveAllowance(@PathVariable Long id) {
         try {
@@ -105,7 +105,7 @@ public class AllowanceController {
         }
     }
 
-    // Lấy thống kê phụ cấp theo intern
+    // 7.Lấy thống kê phụ cấp theo intern
     @GetMapping("/stats/by-intern/{internId}")
     public ResponseEntity<?> getAllowanceStatsByIntern(@PathVariable Long internId) {
         try {
@@ -119,7 +119,7 @@ public class AllowanceController {
         }
     }
 
-    // Lấy danh sách phụ cấp chờ duyệt
+    // 8.Lấy danh sách phụ cấp chờ duyệt
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingAllowances(
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -136,7 +136,7 @@ public class AllowanceController {
         }
     }
 
-    // Lấy danh sách phụ cấp đã duyệt
+    // 9.Lấy danh sách phụ cấp đã duyệt
     @GetMapping("/approved")
     public ResponseEntity<?> getApprovedAllowances(
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -153,7 +153,7 @@ public class AllowanceController {
         }
     }
 
-    // Lấy dashboard thống kê
+    // 10.Lấy dashboard thống kê
     @GetMapping("/dashboard")
     public ResponseEntity<?> getAllowanceDashboard() {
         try {
@@ -167,7 +167,7 @@ public class AllowanceController {
         }
     }
 
-    // Duyệt nhiều phụ cấp cùng lúc
+    // 11.Duyệt nhiều phụ cấp cùng lúc
     @PostMapping("/approve-multiple")
     public ResponseEntity<?> approveMultiple(@RequestBody Map<String, Object> request) {
         try {
@@ -183,7 +183,7 @@ public class AllowanceController {
         }
     }
 
-    // Xuất báo cáo phụ cấp theo tháng
+    // 12.Xuất báo cáo phụ cấp theo tháng
     @GetMapping("/report/monthly")
     public ResponseEntity<?> getMonthlyReport(@RequestParam String month) {
         try {
