@@ -23,9 +23,18 @@ public class Department {
 
     // ✅ Người tạo (HR)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "create_by_hr")
+    @JoinColumn(name = "created_by_hr")
     @JsonBackReference
     private Hr hr;
+
+    public Hr getHr() {
+        return hr;
+    }
+
+    public void setHr(Hr hr) {
+        this.hr = hr;
+    }
+
 
     // --- Getter & Setter ---
     public Long getId() { return id; }
