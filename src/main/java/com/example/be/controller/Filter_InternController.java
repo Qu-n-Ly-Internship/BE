@@ -10,7 +10,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/interns")
 @RequiredArgsConstructor
-public class InternController {
+public class Filter_InternController {
 
     private final InternService internService;
 
