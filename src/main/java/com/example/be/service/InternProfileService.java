@@ -18,6 +18,9 @@ import java.util.Map;
 public class InternProfileService {
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
+    
+    // Giới hạn số người trong mỗi nhóm
+    private static final int MAX_GROUP_SIZE = 8;
 
     public Map<String, Object> getAllProfiles(String query, String school, String major, String status, int page, int size) {
         try {
@@ -25,7 +28,7 @@ public class InternProfileService {
                 SELECT ip.intern_id as intern_id, ip.fullname as student, ip.email as studentEmail,
                        u.name_uni as school, ip.major_id, ip.year_of_study,
                        ip.phone, ip.available_from as startDate, ip.end_date as endDate,
-                       p.title, ip.status,
+                       p.title, ip.status, ip.program_id,
                        mentor.fullname as mentor_name, p.mentor_id
                 FROM intern_profiles ip
                 LEFT JOIN universities u ON ip.uni_id = u.uni_id
@@ -92,7 +95,9 @@ public class InternProfileService {
 
             Integer uniId = getOrCreateUniversity((String) request.get("school"));
             Integer majorId = getMajorId((String) request.get("major"));
-            Integer programId = createInternProgram(request);
+            
+            // ✅ SỬA: Tự động phân nhóm với giới hạn 8 người
+            Integer programId = getOrCreateProgramWithLimit(request);
 
             String insertSql = """
                 INSERT INTO intern_profiles 
@@ -251,21 +256,54 @@ public class InternProfileService {
         return keyHolder.getKey().intValue();
     }
 
-    private Integer createInternProgram(Map<String, Object> request) {
+    /**
+     * ✅ PHƯƠNG THỨC MỚI: Tự động phân nhóm với giới hạn 8 người
+     * - Tìm các program có cùng title
+     * - Kiểm tra số lượng thành viên trong mỗi program
+     * - Nếu program chưa đủ 8 người -> dùng program đó
+     * - Nếu tất cả program đều đủ 8 người -> tạo program mới
+     */
+    private Integer getOrCreateProgramWithLimit(Map<String, Object> request) {
         String title = (String) request.get("title");
         if (title == null || title.trim().isEmpty()) {
             return null;
         }
 
+        // Tìm tất cả các program có cùng title
+        String findProgramsSql = """
+            SELECT p.program_id, COUNT(ip.intern_id) as member_count
+            FROM intern_programs p
+            LEFT JOIN intern_profiles ip ON p.program_id = ip.program_id
+            WHERE p.title = ?
+            GROUP BY p.program_id
+            HAVING COUNT(ip.intern_id) < ?
+            ORDER BY p.program_id ASC
+            LIMIT 1
+            """;
+        
+        List<Map<String, Object>> availablePrograms = jdbcTemplate.queryForList(
+            findProgramsSql, 
+            title.trim(), 
+            MAX_GROUP_SIZE
+        );
+        
+        // Nếu có program chưa đầy -> dùng program đó
+        if (!availablePrograms.isEmpty()) {
+            return (Integer) availablePrograms.get(0).get("program_id");
+        }
+
+        // Nếu tất cả program đều đầy -> tạo program mới
         KeyHolder programKeyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO intern_programs (title, description, capacity, start_date, end_date) VALUES (?, '', 1, ?, ?)",
+                    "INSERT INTO intern_programs (title, description, capacity, start_date, end_date) VALUES (?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS
             );
             ps.setString(1, title.trim());
-            ps.setString(2, (String) request.get("startDate"));
-            ps.setString(3, (String) request.get("endDate"));
+            ps.setString(2, "Nhóm thực tập " + title.trim());
+            ps.setInt(3, MAX_GROUP_SIZE);
+            ps.setString(4, (String) request.get("startDate"));
+            ps.setString(5, (String) request.get("endDate"));
             return ps;
         }, programKeyHolder);
 
@@ -292,7 +330,8 @@ public class InternProfileService {
             return currentProgramId;
         }
 
-        return createInternProgram(request);
+        // Dùng logic tự động phân nhóm
+        return getOrCreateProgramWithLimit(request);
     }
 
     private int getTotalProfileCount(String query, String school, String major, String status) {

@@ -39,6 +39,12 @@ public class InternProfile {
     @Column(name = "available_from")
     private LocalDate availableFrom;
 
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Column(name = "status")
+    private String status;
+
     @ManyToOne
     @JoinColumn(name = "uni_id")
     private University university;
