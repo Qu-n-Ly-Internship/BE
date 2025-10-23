@@ -27,5 +27,7 @@ public class Project {
 
     @ManyToOne
     @JoinColumn(name = "mentor_id")
-    private User mentor;
+    private Mentors mentor;
+
+
 }

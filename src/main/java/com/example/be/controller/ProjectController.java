@@ -1,111 +1,62 @@
 package com.example.be.controller;
 
-import com.example.be.service.InternshipService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import com.example.be.dto.ProjectRequest;
+import com.example.be.entity.InternProfile;
+import com.example.be.service.ProjectService;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/internships")
-@RequiredArgsConstructor
+@RequestMapping("/api/projects")
+@CrossOrigin(origins = "*")
 public class ProjectController {
-    private final InternshipService internshipService;
 
-    // 1. Lấy danh sách tất cả intern programs với filter
-    @GetMapping("")
-    public ResponseEntity<?> getAllInternships(
-            @RequestParam(value = "q", defaultValue = "") String query,
-            @RequestParam(value = "startDate", required = false) String startDate,
-            @RequestParam(value = "endDate", required = false) String endDate,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size
-    ) {
-        try {
-            Map<String, Object> result = internshipService.getAllInternships(query, startDate, endDate, page, size);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Lỗi khi lấy danh sách chương trình: " + e.getMessage()
-            ));
-        }
+    private final ProjectService projectService;
+
+    public ProjectController(ProjectService projectService) {
+        this.projectService = projectService;
     }
 
-    // 2. Lấy chi tiết một intern program
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getProgramById(@PathVariable Long id) {
-        try {
-            Map<String, Object> result = internshipService.getProgramById(id);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Lỗi khi lấy chi tiết chương trình: " + e.getMessage()
-            ));
-        }
+    // ✅ Lấy tất cả project của tất cả mentor
+    @GetMapping
+    public List<ProjectRequest> getAllProjects() {
+        return projectService.getAllProjects();
     }
 
-    // 3. Tạo intern program mới
-    @PostMapping("")
-    public ResponseEntity<?> createProgram(@RequestBody Map<String, Object> request) {
-        try {
-            Map<String, Object> result = internshipService.createProgram(request);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Lỗi khi tạo chương trình: " + e.getMessage()
-            ));
-        }
+    // ✅ Lấy tất cả project của mentor theo userId
+    @GetMapping("/mentor/{userId}")
+    public List<ProjectRequest> getProjectsByMentor(@PathVariable Long userId) {
+        return projectService.getProjectsByUserId(userId);
     }
 
-    // 4. Cập nhật intern program
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateProgram(
-            @PathVariable Long id,
-            @RequestBody Map<String, Object> request
-    ) {
-        try {
-            Map<String, Object> result = internshipService.updateProgram(id, request);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Lỗi khi cập nhật chương trình: " + e.getMessage()
-            ));
-        }
+    // ✅ Tạo mới project
+    @PostMapping("/{userId}")
+    public ProjectRequest createProject(@PathVariable Long userId, @RequestBody ProjectRequest request) {
+        return projectService.createProject(request, userId);
     }
 
-    // 5. Xóa intern program
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteProgram(@PathVariable Long id) {
-        try {
-            internshipService.deleteProgram(id);
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Xóa chương trình thành công!"
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Lỗi khi xóa chương trình: " + e.getMessage()
-            ));
-        }
+    // ✅ Cập nhật project
+    @PutMapping("/{id}/{userId}")
+    public ProjectRequest updateProject(@PathVariable Long id,
+                                    @PathVariable Long userId,
+                                    @RequestBody ProjectRequest request) {
+        return projectService.updateProject(id, request, userId);
     }
 
-    // 6. Lấy danh sách thực tập sinh theo chương trình
-    @GetMapping("/{id}/interns")
-    public ResponseEntity<?> getInternsByProgram(@PathVariable Long id) {
-        try {
-            Map<String, Object> result = internshipService.getInternsByProgram(id);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Lỗi khi lấy danh sách thực tập sinh: " + e.getMessage()
-            ));
-        }
+    // ✅ Xóa project
+    @DeleteMapping("/{id}/{userId}")
+    public void deleteProject(@PathVariable Long id, @PathVariable Long userId) {
+        projectService.deleteProject(id, userId);
     }
+
+    // ✅ Thêm 1 intern vào project (cho phép cả mentor và HR)
+    @PostMapping("/{projectId}/add-intern/{userId}/{internId}")
+    public ProjectRequest addInternToProject(@PathVariable Long projectId,
+                                             @PathVariable Long userId,
+                                             @PathVariable Long internId) {
+        return projectService.addInternToProject(projectId, internId, userId);
+    }
+
+
 }
