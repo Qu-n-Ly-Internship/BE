@@ -37,22 +37,17 @@ public class InternScheduleService {
                 throw new RuntimeException("Thực tập sinh chưa tham gia chương trình nào");
             }
 
-            LocalDate start = program.getStartDate();
-            LocalDate end = program.getEndDate();
+            InternSchedule schedule = InternSchedule.builder()
+                    .intern(intern)
+                    .program(program)
+                    .date(LocalDate.now())
+                    .status("PLANNED")
+                    .note("Lịch mặc định cho chương trình " + program.getTitle())
+                    .build();
 
-            List<InternSchedule> schedules = new ArrayList<>();
-            for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
-                schedules.add(InternSchedule.builder()
-                        .intern(intern)
-                        .program(program)
-                        .date(date)
-                        .status("PLANNED")
-                        .note("Làm việc theo chương trình " + program.getTitle())
-                        .build());
-            }
+            scheduleRepository.save(schedule);
 
-            scheduleRepository.saveAll(schedules);
-            return Map.of("success", true, "message", "Đã sinh lịch tự động", "data", schedules);
+            return Map.of("success", true, "message", "Đã sinh 1 lịch mặc định", "data", schedule);
         } catch (Exception e) {
             return Map.of("success", false, "message", e.getMessage());
         }

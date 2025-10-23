@@ -46,6 +46,7 @@ public class SecurityConfig {
                                 "/api/documents/**",
                                 "/api/profiles/**",
                                 "/api/interns/**",
+                                "/api/allowances/**",
                                 "/api/intern-profiles/**",
                                 "/api/mentors/**",
                                 "/api/internships/**",
