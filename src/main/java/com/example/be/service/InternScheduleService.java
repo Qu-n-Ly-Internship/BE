@@ -32,7 +32,7 @@ public class InternScheduleService {
             InternProfile intern = internRepository.findById(internId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thực tập sinh"));
 
-            InternProgram program = intern.getProgram();
+            Project program = intern.getProgram();
             if (program == null) {
                 throw new RuntimeException("Thực tập sinh chưa tham gia chương trình nào");
             }

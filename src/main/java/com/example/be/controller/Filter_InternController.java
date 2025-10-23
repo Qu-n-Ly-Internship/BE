@@ -11,7 +11,7 @@ import java.util.Map;
 @RequestMapping("/api/interns")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:5173")
-public class InternController {
+public class Filter_InternController {
 
     private final InternService internService;
 

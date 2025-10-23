@@ -25,7 +25,7 @@ public class InternSchedule {
 
     @ManyToOne
     @JoinColumn(name = "program_id")
-    private InternProgram program;
+    private Project program;
 
     @ManyToOne
     @JoinColumn(name = "task_id")
