@@ -29,7 +29,7 @@ public class InternProfile {
 
     @ManyToOne
     @JoinColumn(name = "program_id")
-    private InternProgram program;
+    private Project program;
 
     @Column(name = "year_of_study")
     private Integer yearOfStudy;

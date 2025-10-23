@@ -10,7 +10,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/internships")
 @RequiredArgsConstructor
-public class Intern_ProgramController {
+public class ProjectController {
     private final InternshipService internshipService;
 
     // 1. Lấy danh sách tất cả intern programs với filter
