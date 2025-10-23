@@ -231,16 +231,24 @@ public class MentorService {
     public Map<String, Object> getAllAssignments(Long mentorId) {
         try {
             StringBuilder sql = new StringBuilder("""
-                SELECT prog.mentor_id, ip.intern_id, prog.start_date,
-                       u.fullname as mentor_name, u.email as mentor_email,
-                       ip.fullname as intern_name, ip.phone as intern_phone,
-                       uni.name_uni as university_name
-                FROM intern_profiles ip
-                JOIN intern_programs prog ON ip.program_id = prog.program_id
-                LEFT JOIN users u ON prog.mentor_id = u.user_id
-                LEFT JOIN universities uni ON ip.uni_id = uni.uni_id
-                WHERE prog.mentor_id IS NOT NULL
-                """);
+            SELECT 
+                prog.mentor_id, 
+                ip.intern_id, 
+                ip.available_from as start_date,
+                u.fullname as mentor_name, 
+                u.email as mentor_email,
+                ip.fullname as intern_name, 
+                ip.phone as intern_phone,
+                ip.email as intern_email,
+                uni.name_uni as university_name,
+                prog.program_id,
+                prog.title as program_title
+            FROM intern_programs prog
+            JOIN intern_profiles ip ON prog.program_id = ip.program_id
+            LEFT JOIN users u ON prog.mentor_id = u.user_id
+            LEFT JOIN universities uni ON ip.uni_id = uni.uni_id
+            WHERE prog.mentor_id IS NOT NULL
+            """);
 
             List<Object> params = new ArrayList<>();
 
@@ -249,14 +257,30 @@ public class MentorService {
                 params.add(mentorId);
             }
 
-            sql.append(" ORDER BY prog.start_date DESC");
+            sql.append(" ORDER BY ip.available_from DESC");
 
-            List<Map<String, Object>> assignments = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+            List<Map<String, Object>> assignments = jdbcTemplate.queryForList(
+                    sql.toString(),
+                    params.toArray()
+            );
 
-            return Map.of("success", true, "data", assignments, "total", assignments.size());
+            return Map.of(
+                    "success", true,
+                    "data", assignments,
+                    "total", assignments.size()
+            );
 
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi lấy danh sách phân công: " + e.getMessage(), e);
+            // Log chi tiết để debug
+            System.err.println("❌ Error in getAllAssignments: " + e.getMessage());
+            e.printStackTrace();
+
+            return Map.of(
+                    "success", false,
+                    "message", "Lỗi khi lấy danh sách phân công: " + e.getMessage(),
+                    "data", List.of(),
+                    "total", 0
+            );
         }
     }
 
