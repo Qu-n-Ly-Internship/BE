@@ -5,8 +5,6 @@ import com.example.be.entity.InternProfile;
 import com.example.be.repository.AllowancePaymentRepository;
 import com.example.be.repository.InternProfileRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,22 +16,36 @@ public class AllowanceService {
     private final AllowancePaymentRepository allowanceRepository;
     private final InternProfileRepository internProfileRepository;
 
-    // Lấy danh sách phụ cấp với filter
+    // Lấy danh sách phụ cấp với filter - ✅ FIX LỖI PARSE VÀ NULL SAFETY
     public Map<String, Object> getAllAllowances(String internId, String startDate, String endDate, int page, int size) {
         try {
+            System.out.println("=== getAllAllowances called ===");
             List<AllowancePayment> allowances;
 
-            if (internId != null && !internId.isEmpty()) {
-                Long iId = Long.parseLong(internId);
-                if (startDate != null && endDate != null) {
-                    LocalDate start = LocalDate.parse(startDate);
-                    LocalDate end = LocalDate.parse(endDate);
-                    allowances = allowanceRepository.findByInternIdAndDateRange(iId, start, end);
-                } else {
-                    allowances = allowanceRepository.findByIntern_Id(iId);
+            // ✅ FIX: Kiểm tra và parse an toàn
+            if (internId != null && !internId.trim().isEmpty()) {
+                try {
+                    Long iId = Long.parseLong(internId.trim());
+                    if (startDate != null && !startDate.trim().isEmpty() &&
+                            endDate != null && !endDate.trim().isEmpty()) {
+                        LocalDate start = LocalDate.parse(startDate);
+                        LocalDate end = LocalDate.parse(endDate);
+                        allowances = allowanceRepository.findByInternIdAndDateRange(iId, start, end);
+                    } else {
+                        allowances = allowanceRepository.findByIntern_Id(iId);
+                    }
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Intern ID không hợp lệ: " + internId);
                 }
             } else {
+                System.out.println("Fetching all allowances from database...");
                 allowances = allowanceRepository.findAll();
+                System.out.println("Found " + allowances.size() + " allowances");
+            }
+
+            // ✅ FIX: Kiểm tra null trước khi sort
+            if (allowances == null) {
+                allowances = new ArrayList<>();
             }
 
             // Sort by date descending
@@ -42,7 +54,9 @@ public class AllowanceService {
             // Pagination
             int startIdx = page * size;
             int endIdx = Math.min(startIdx + size, allowances.size());
-            List<AllowancePayment> paged = allowances.subList(startIdx, endIdx);
+            List<AllowancePayment> paged = startIdx < allowances.size()
+                    ? allowances.subList(startIdx, endIdx)
+                    : new ArrayList<>();
 
             List<Map<String, Object>> data = new ArrayList<>();
             for (AllowancePayment a : paged) {
@@ -54,6 +68,7 @@ public class AllowanceService {
                 map.put("date", a.getDate());
                 map.put("paidAt", a.getPaidAt());
                 map.put("note", a.getNote() != null ? a.getNote() : "");
+                map.put("allowType", a.getAllowanceType() != null ? a.getAllowanceType() : "");
                 data.add(map);
             }
 
@@ -67,14 +82,21 @@ public class AllowanceService {
                             "totalPages", (int) Math.ceil((double) allowances.size() / size)
                     )
             );
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi lấy danh sách phụ cấp: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Lỗi khi lấy danh sách phụ cấp: " + e.getMessage(), e);
         }
     }
 
-    // Lấy chi tiết một phụ cấp
+    // Lấy chi tiết một phụ cấp - ✅ FIX THÊM VALIDATION
     public Map<String, Object> getAllowanceById(Long id) {
         try {
+            if (id == null || id <= 0) {
+                throw new IllegalArgumentException("ID không hợp lệ");
+            }
+
             AllowancePayment allowance = allowanceRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy phụ cấp với ID: " + id));
 
@@ -88,7 +110,8 @@ public class AllowanceService {
                             "date", allowance.getDate(),
                             "createdAt", allowance.getCreatedAt(),
                             "paidAt", allowance.getPaidAt(),
-                            "note", allowance.getNote()
+                            "note", allowance.getNote() != null ? allowance.getNote() : "",
+                            "allowType", allowance.getAllowanceType() != null ? allowance.getAllowanceType() : ""
                     )
             );
         } catch (Exception e) {
@@ -96,13 +119,26 @@ public class AllowanceService {
         }
     }
 
-    // Tạo phụ cấp mới
+    // Tạo phụ cấp mới - ✅ FIX VALIDATION
     public Map<String, Object> createAllowance(Map<String, Object> request) {
         try {
+            // ✅ Validate input
+            if (request.get("internId") == null) {
+                throw new IllegalArgumentException("Vui lòng chọn thực tập sinh");
+            }
+            if (request.get("amount") == null) {
+                throw new IllegalArgumentException("Vui lòng nhập số tiền");
+            }
+            if (request.get("date") == null) {
+                throw new IllegalArgumentException("Vui lòng chọn ngày");
+            }
+
             Long internId = Long.parseLong(request.get("internId").toString());
             Double amount = Double.parseDouble(request.get("amount").toString());
             LocalDate date = LocalDate.parse(request.get("date").toString());
             String note = (String) request.getOrDefault("note", "");
+            String allowanceType = (String) request.getOrDefault("allowType", "");
+
 
             if (amount <= 0) {
                 throw new IllegalArgumentException("Số tiền phụ cấp phải lớn hơn 0");
@@ -116,6 +152,7 @@ public class AllowanceService {
                     .amount(amount)
                     .date(date)
                     .note(note)
+                    .allowanceType(allowanceType)
                     .build();
 
             AllowancePayment saved = allowanceRepository.save(allowance);
@@ -130,16 +167,23 @@ public class AllowanceService {
                             "date", saved.getDate()
                     )
             );
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Định dạng số không hợp lệ");
         } catch (Exception e) {
             throw new RuntimeException("Tạo phụ cấp thất bại: " + e.getMessage());
         }
     }
 
-    // Cập nhật phụ cấp
+    // Cập nhật phụ cấp - ✅ FIX: Kiểm tra đã thanh toán
     public Map<String, Object> updateAllowance(Long id, Map<String, Object> request) {
         try {
             AllowancePayment allowance = allowanceRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy phụ cấp với ID: " + id));
+
+            // ✅ FIX: Không cho sửa nếu đã thanh toán
+            if (allowance.getPaidAt() != null) {
+                throw new IllegalStateException("Không thể sửa phụ cấp đã được thanh toán");
+            }
 
             if (request.containsKey("amount")) {
                 Double amount = Double.parseDouble(request.get("amount").toString());
@@ -155,6 +199,10 @@ public class AllowanceService {
 
             if (request.containsKey("note")) {
                 allowance.setNote((String) request.get("note"));
+            }
+
+            if (request.containsKey("allowType")) {
+                allowance.setAllowanceType((String) request.get("allowType"));
             }
 
             AllowancePayment saved = allowanceRepository.save(allowance);
@@ -173,12 +221,17 @@ public class AllowanceService {
         }
     }
 
-    // Xóa phụ cấp
+    // Xóa phụ cấp - ✅ FIX: Kiểm tra đã thanh toán
     public Map<String, Object> deleteAllowance(Long id) {
         try {
-            if (!allowanceRepository.existsById(id)) {
-                throw new RuntimeException("Không tìm thấy phụ cấp với ID: " + id);
+            AllowancePayment allowance = allowanceRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy phụ cấp với ID: " + id));
+
+            // ✅ FIX: Không cho xóa nếu đã thanh toán
+            if (allowance.getPaidAt() != null) {
+                throw new IllegalStateException("Không thể xóa phụ cấp đã được thanh toán");
             }
+
             allowanceRepository.deleteById(id);
 
             return Map.of(
@@ -216,11 +269,18 @@ public class AllowanceService {
         }
     }
 
-    // Lấy thống kê phụ cấp theo intern
+    // Lấy thống kê phụ cấp theo intern - ✅ FIX NULL SAFETY
     public Map<String, Object> getAllowanceStatsByIntern(Long internId) {
         try {
             List<AllowancePayment> allowances = allowanceRepository.findByIntern_Id(internId);
+            if (allowances == null) {
+                allowances = new ArrayList<>();
+            }
+
             Double total = allowanceRepository.getTotalAllowanceByInternId(internId);
+            if (total == null) {
+                total = 0.0;
+            }
 
             long paid = allowances.stream().filter(a -> a.getPaidAt() != null).count();
             long pending = allowances.stream().filter(a -> a.getPaidAt() == null).count();
@@ -245,14 +305,17 @@ public class AllowanceService {
     // Lấy danh sách phụ cấp chờ duyệt
     public Map<String, Object> getPendingAllowances(int page, int size) {
         try {
-            List<AllowancePayment> pending = allowanceRepository.findAll().stream()
+            List<AllowancePayment> allAllowances = allowanceRepository.findAll();
+            List<AllowancePayment> pending = allAllowances.stream()
                     .filter(a -> a.getPaidAt() == null)
                     .sorted((a, b) -> b.getDate().compareTo(a.getDate()))
                     .toList();
 
             int startIdx = page * size;
             int endIdx = Math.min(startIdx + size, pending.size());
-            List<AllowancePayment> paged = pending.subList(startIdx, endIdx);
+            List<AllowancePayment> paged = startIdx < pending.size()
+                    ? pending.subList(startIdx, endIdx)
+                    : new ArrayList<>();
 
             List<Map<String, Object>> data = new ArrayList<>();
             for (AllowancePayment a : paged) {
@@ -262,6 +325,7 @@ public class AllowanceService {
                 map.put("amount", a.getAmount());
                 map.put("date", a.getDate());
                 map.put("createdAt", a.getCreatedAt());
+                map.put("allowType", a.getAllowanceType() != null ? a.getAllowanceType() : "");
                 data.add(map);
             }
 
@@ -283,14 +347,17 @@ public class AllowanceService {
     // Lấy danh sách phụ cấp đã duyệt
     public Map<String, Object> getApprovedAllowances(int page, int size) {
         try {
-            List<AllowancePayment> approved = allowanceRepository.findAll().stream()
+            List<AllowancePayment> allAllowances = allowanceRepository.findAll();
+            List<AllowancePayment> approved = allAllowances.stream()
                     .filter(a -> a.getPaidAt() != null)
                     .sorted((a, b) -> b.getPaidAt().compareTo(a.getPaidAt()))
                     .toList();
 
             int startIdx = page * size;
             int endIdx = Math.min(startIdx + size, approved.size());
-            List<AllowancePayment> paged = approved.subList(startIdx, endIdx);
+            List<AllowancePayment> paged = startIdx < approved.size()
+                    ? approved.subList(startIdx, endIdx)
+                    : new ArrayList<>();
 
             List<Map<String, Object>> data = new ArrayList<>();
             for (AllowancePayment a : paged) {
@@ -301,6 +368,7 @@ public class AllowanceService {
                 map.put("amount", a.getAmount());
                 map.put("date", a.getDate());
                 map.put("paidAt", a.getPaidAt());
+                map.put("allowType", a.getAllowanceType() != null ? a.getAllowanceType() : "");
                 data.add(map);
             }
 
@@ -323,6 +391,9 @@ public class AllowanceService {
     public Map<String, Object> getAllowanceDashboard() {
         try {
             List<AllowancePayment> all = allowanceRepository.findAll();
+            if (all == null) {
+                all = new ArrayList<>();
+            }
 
             double totalAmount = all.stream()
                     .mapToDouble(AllowancePayment::getAmount)
@@ -363,6 +434,10 @@ public class AllowanceService {
     // Duyệt nhiều phụ cấp cùng lúc
     public Map<String, Object> approveMultiple(List<Long> allowanceIds) {
         try {
+            if (allowanceIds == null || allowanceIds.isEmpty()) {
+                throw new IllegalArgumentException("Danh sách phụ cấp không được rỗng");
+            }
+
             int successCount = 0;
             int failCount = 0;
             List<String> errors = new ArrayList<>();
@@ -402,14 +477,27 @@ public class AllowanceService {
     // Xuất báo cáo phụ cấp theo tháng
     public Map<String, Object> getMonthlyReport(String month) {
         try {
+            if (month == null || month.trim().isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng chọn tháng");
+            }
+
             String[] parts = month.split("-");
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("Định dạng tháng không hợp lệ. Sử dụng: YYYY-MM");
+            }
+
             int year = Integer.parseInt(parts[0]);
             int monthNum = Integer.parseInt(parts[1]);
+
+            if (monthNum < 1 || monthNum > 12) {
+                throw new IllegalArgumentException("Tháng phải từ 1-12");
+            }
 
             LocalDate startDate = LocalDate.of(year, monthNum, 1);
             LocalDate endDate = startDate.plusMonths(1).minusDays(1);
 
-            List<AllowancePayment> monthlyData = allowanceRepository.findAll().stream()
+            List<AllowancePayment> allAllowances = allowanceRepository.findAll();
+            List<AllowancePayment> monthlyData = allAllowances.stream()
                     .filter(a -> !a.getDate().isBefore(startDate) && !a.getDate().isAfter(endDate))
                     .sorted((a, b) -> a.getIntern().getFullName().compareTo(b.getIntern().getFullName()))
                     .toList();
@@ -438,163 +526,11 @@ public class AllowanceService {
                     "summary", summary,
                     "details", details
             );
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Định dạng tháng không hợp lệ");
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi xuất báo cáo: " + e.getMessage());
         }
+
     }
-
-
-    // Tìm kiếm phụ cấp
-    public Map<String, Object> searchAllowances(String keyword, int page, int size) {
-        try {
-            List<AllowancePayment> all = allowanceRepository.findAll();
-            String lowerKeyword = keyword.toLowerCase();
-
-            List<AllowancePayment> filtered = all.stream()
-                    .filter(a -> a.getIntern().getFullName().toLowerCase().contains(lowerKeyword) ||
-                            a.getNote().toLowerCase().contains(lowerKeyword) ||
-                            String.valueOf(a.getAmount()).contains(keyword))
-                    .sorted((a, b) -> b.getDate().compareTo(a.getDate()))
-                    .toList();
-
-            int startIdx = page * size;
-            int endIdx = Math.min(startIdx + size, filtered.size());
-            List<AllowancePayment> paged = filtered.subList(startIdx, endIdx);
-
-            List<Map<String, Object>> data = new ArrayList<>();
-            for (AllowancePayment a : paged) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("allowanceId", a.getId());
-                map.put("internId", a.getIntern().getId());
-                map.put("internName", a.getIntern().getFullName());
-                map.put("amount", a.getAmount());
-                map.put("date", a.getDate());
-                map.put("paidAt", a.getPaidAt());
-                map.put("note", a.getNote());
-                data.add(map);
-            }
-
-            return Map.of(
-                    "success", true,
-                    "data", data,
-                    "pagination", Map.of(
-                            "currentPage", page,
-                            "pageSize", size,
-                            "totalElements", filtered.size(),
-                            "totalPages", (int) Math.ceil((double) filtered.size() / size)
-                    )
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi tìm kiếm: " + e.getMessage());
-        }
-    }
-
-    // Xuất Excel báo cáo phụ cấp
-    public Map<String, Object> exportAllowancesReport() {
-        try {
-            List<AllowancePayment> all = allowanceRepository.findAll();
-
-            List<Map<String, Object>> reportData = new ArrayList<>();
-            for (AllowancePayment a : all) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("STT", reportData.size() + 1);
-                map.put("Mã phụ cấp", a.getId());
-                map.put("Tên thực tập sinh", a.getIntern().getFullName());
-                map.put("Số tiền", String.format("%.0f VNĐ", a.getAmount()));
-                map.put("Ngày cấp phát", a.getDate());
-                map.put("Trạng thái", a.getPaidAt() != null ? "ĐÃ DUYỆT" : "CHỜ DUYỆT");
-                map.put("Ngày duyệt", a.getPaidAt());
-                map.put("Ghi chú", a.getNote());
-                reportData.add(map);
-            }
-
-            return Map.of(
-                    "success", true,
-                    "message", "Xuất báo cáo thành công",
-                    "totalRecords", all.size(),
-                    "totalAmount", String.format("%.0f VNĐ", all.stream().mapToDouble(AllowancePayment::getAmount).sum()),
-                    "data", reportData
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi xuất báo cáo: " + e.getMessage());
-        }
-    }
-
-    // Thống kê phụ cấp theo từng intern
-    public Map<String, Object> getAllowanceByAllInterns() {
-        try {
-            List<AllowancePayment> all = allowanceRepository.findAll();
-
-            Map<Long, Map<String, Object>> internStats = new HashMap<>();
-            for (AllowancePayment a : all) {
-                Long internId = a.getIntern().getId();
-                internStats.putIfAbsent(internId, new HashMap<>());
-
-                Map<String, Object> stats = internStats.get(internId);
-                stats.put("internId", internId);
-                stats.put("internName", a.getIntern().getFullName());
-
-                Double currentTotal = (Double) stats.getOrDefault("totalAmount", 0.0);
-                stats.put("totalAmount", currentTotal + a.getAmount());
-
-                Long paidCount = (Long) stats.getOrDefault("paidCount", 0L);
-                if (a.getPaidAt() != null) {
-                    stats.put("paidCount", paidCount + 1);
-                }
-
-                Long pendingCount = (Long) stats.getOrDefault("pendingCount", 0L);
-                if (a.getPaidAt() == null) {
-                    stats.put("pendingCount", pendingCount + 1);
-                }
-
-                Long totalCount = (Long) stats.getOrDefault("totalCount", 0L);
-                stats.put("totalCount", totalCount + 1);
-            }
-
-            List<Map<String, Object>> result = new ArrayList<>(internStats.values());
-            result.sort((a, b) -> ((Double) b.get("totalAmount")).compareTo((Double) a.get("totalAmount")));
-
-            return Map.of(
-                    "success", true,
-                    "totalInterns", internStats.size(),
-                    "data", result
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi lấy thống kê: " + e.getMessage());
-        }
-    }
-
-    // Lấy lịch sử thay đổi phụ cấp
-    public Map<String, Object> getAllowanceHistory(Long internId) {
-        try {
-            List<AllowancePayment> history = allowanceRepository.findByIntern_Id(internId);
-            history.sort((a, b) -> b.getDate().compareTo(a.getDate()));
-
-            List<Map<String, Object>> data = new ArrayList<>();
-            for (AllowancePayment a : history) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("allowanceId", a.getId());
-                map.put("amount", a.getAmount());
-                map.put("date", a.getDate());
-                map.put("createdAt", a.getCreatedAt());
-                map.put("status", a.getPaidAt() != null ? "ĐÃ DUYỆT" : "CHỜ DUYỆT");
-                map.put("paidAt", a.getPaidAt());
-                map.put("note", a.getNote());
-                data.add(map);
-            }
-
-            Double totalAmount = allowanceRepository.getTotalAllowanceByInternId(internId);
-
-            return Map.of(
-                    "success", true,
-                    "internId", internId,
-                    "totalAmount", totalAmount,
-                    "totalRecords", data.size(),
-                    "history", data
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi lấy lịch sử: " + e.getMessage());
-        }
-    }
-
 }

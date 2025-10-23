@@ -28,9 +28,11 @@ public class AllowanceController {
             Map<String, Object> result = allowanceService.getAllAllowances(internId, startDate, endDate, page, size);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            e.printStackTrace(); // Log chi tiết lỗi
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Lỗi: " + e.getMessage()
+                    "message", "Lỗi: " + e.getMessage(),
+                    "error", e.getClass().getSimpleName()
             ));
         }
     }

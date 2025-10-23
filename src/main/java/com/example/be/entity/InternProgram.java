@@ -3,8 +3,6 @@ package com.example.be.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
-
 @Entity
 @Table(name = "intern_programs")
 @Getter
@@ -13,6 +11,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class InternProgram {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "program_id")
@@ -22,16 +21,11 @@ public class InternProgram {
 
     private Integer capacity;
 
-    @ManyToOne
-    @JoinColumn(name = "created_by")
-    private User createdBy;
-
-    @Column(name = "start_date")
-    private LocalDate startDate;
-
-    @Column(name = "end_date")
-    private LocalDate endDate;
-
     @Column(columnDefinition = "TEXT")
     private String description;
+
+
+    @ManyToOne
+    @JoinColumn(name = "mentor_id")
+    private User mentor;
 }

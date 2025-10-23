@@ -37,6 +37,9 @@ public class AllowancePayment {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "allowance_type")
+    private String allowanceType;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
