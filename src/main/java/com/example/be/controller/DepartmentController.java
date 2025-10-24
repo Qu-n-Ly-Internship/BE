@@ -1,7 +1,9 @@
 package com.example.be.controller;
 
 import com.example.be.dto.DepartmentRequest;
+import com.example.be.dto.MentorDepartmentRequest;
 import com.example.be.entity.Department;
+import com.example.be.entity.Mentors;
 import com.example.be.service.DepartmentService;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,5 +60,43 @@ public class DepartmentController {
     @DeleteMapping("/{id}")
     public void deleteDepartment(@PathVariable Long id) {
         departmentService.delete(id);
+    }
+
+    // ========== QUẢN LÝ MENTOR TRONG DEPARTMENT ==========
+
+    // ✅ Lấy danh sách mentor trong department
+    @GetMapping("/{departmentId}/mentors")
+    public List<MentorDepartmentRequest> getMentorsByDepartment(@PathVariable Long departmentId) {
+        return departmentService.getMentorsByDepartment(departmentId);
+    }
+
+    // ✅ Lấy danh sách mentor chưa thuộc department nào
+    @GetMapping("/mentors/available")
+    public List<Mentors> getAvailableMentors() {
+        return departmentService.getAvailableMentors();
+    }
+
+    // ✅ Thêm mentor vào department
+    @PostMapping("/{departmentId}/mentors/{mentorId}")
+    public Mentors addMentorToDepartment(
+            @PathVariable Long departmentId,
+            @PathVariable Long mentorId
+    ) {
+        return departmentService.addMentorToDepartment(departmentId, mentorId);
+    }
+
+    // ✅ Cập nhật mentor trong department (chuyển sang department khác)
+    @PutMapping("/mentors/{mentorId}/department/{newDepartmentId}")
+    public Mentors updateMentorDepartment(
+            @PathVariable Long mentorId,
+            @PathVariable Long newDepartmentId
+    ) {
+        return departmentService.updateMentorDepartment(mentorId, newDepartmentId);
+    }
+
+    // ✅ Xóa mentor khỏi department
+    @DeleteMapping("/mentors/{mentorId}")
+    public void removeMentorFromDepartment(@PathVariable Long mentorId) {
+        departmentService.removeMentorFromDepartment(mentorId);
     }
 }
