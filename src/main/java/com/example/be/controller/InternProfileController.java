@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/intern-profiles")
@@ -15,6 +15,8 @@ public class InternProfileController {
 
     private final InternProfileService internProfileService;
 
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     // 1. Lấy danh sách intern profiles với filter
     @GetMapping("")
     public ResponseEntity<?> getAllProfiles(
@@ -23,16 +25,14 @@ public class InternProfileController {
             @RequestParam(value = "major", required = false) String major,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "100") int size
-    ) {
+            @RequestParam(value = "size", defaultValue = "100") int size) {
         try {
             Map<String, Object> result = internProfileService.getAllProfiles(query, school, major, status, page, size);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Lỗi khi tải danh sách: " + e.getMessage()
-            ));
+                    "message", "Lỗi khi tải danh sách: " + e.getMessage()));
         }
     }
 
@@ -45,8 +45,7 @@ public class InternProfileController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Thêm thất bại: " + e.getMessage()
-            ));
+                    "message", "Thêm thất bại: " + e.getMessage()));
         }
     }
 
@@ -54,16 +53,14 @@ public class InternProfileController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProfile(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> request
-    ) {
+            @RequestBody Map<String, Object> request) {
         try {
             Map<String, Object> result = internProfileService.updateProfile(id, request);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Cập nhật thất bại: " + e.getMessage()
-            ));
+                    "message", "Cập nhật thất bại: " + e.getMessage()));
         }
     }
 
@@ -74,13 +71,33 @@ public class InternProfileController {
             internProfileService.deleteProfile(id);
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Xóa thành công!"
-            ));
+                    "message", "Xóa thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", "Xóa thất bại: " + e.getMessage()
-            ));
+                    "message", "Xóa thất bại: " + e.getMessage()));
+        }
+    }
+
+    // 5. Thống kê số lượng intern theo trạng thái
+    @GetMapping("/stats/status")
+    public ResponseEntity<?> getInternStatusStats() {
+        try {
+            String sql = """
+                    SELECT status, COUNT(*) AS count
+                    FROM intern_profiles
+                    GROUP BY status
+                    """;
+
+            List<Map<String, Object>> result = jdbcTemplate.queryForList(sql);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", result));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi khi thống kê trạng thái thực tập sinh: " + e.getMessage()));
         }
     }
 }
