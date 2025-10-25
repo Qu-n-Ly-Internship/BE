@@ -1,9 +1,8 @@
 package com.example.be.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.io.Serializable;
 
 @Entity
 @Table(name = "mentors")
@@ -22,8 +21,11 @@ public class Mentors {
     @Column(name = "fullname", nullable = false)
     private String fullName;
 
-    @Column(name = "department_id")
-    private Long departmentId;
+    // ✅ Quan hệ với Department
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    @JsonBackReference
+    private Department department;
 
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)
