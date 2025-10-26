@@ -50,7 +50,7 @@ public class ProjectController {
         projectService.deleteProject(id, userId);
     }
 
-    // ✅ Thêm 1 intern vào project (cho phép cả mentor và HR)
+    // ✅ Thêm 1 intern vào project
     @PostMapping("/{projectId}/add-intern/{userId}/{internId}")
     public ProjectRequest addInternToProject(@PathVariable Long projectId,
                                              @PathVariable Long userId,

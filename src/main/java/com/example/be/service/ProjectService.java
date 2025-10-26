@@ -19,15 +19,19 @@ public class ProjectService {
     private final MentorRepository mentorRepository;
     private final InternProfileRepository internProfileRepository;
     private final HrContextService hrContextService;
+    private final MentorContextService mentorContextService;
 
     public ProjectService(ProjectRepository projectRepository,
                           MentorRepository mentorRepository,
                           InternProfileRepository internProfileRepository,
-                          HrContextService hrContextService) {
+                          HrContextService hrContextService,
+                          MentorContextService mentorContextService
+                            ) {
         this.projectRepository = projectRepository;
         this.mentorRepository = mentorRepository;
         this.internProfileRepository = internProfileRepository;
         this.hrContextService = hrContextService;
+        this.mentorContextService = mentorContextService;
     }
 
     // ✅ Chuyển từ entity -> DTO
@@ -66,69 +70,80 @@ public class ProjectService {
                 .collect(Collectors.toList());
     }
 
-    // ✅ Lấy project theo mentor (giữ nguyên nếu cần cho hiển thị)
+    // ✅ Lấy project theo userId (chỉ lấy project của mentor đó)
     public List<ProjectRequest> getProjectsByUserId(Long userId) {
+        // Lấy mentorId từ userId qua MentorContextService
+        Long mentorId = mentorContextService.getMentorIdFromUserId(userId);
+        if (mentorId == null) {
+            throw new RuntimeException("Không tìm thấy mentor tương ứng với userId = " + userId);
+        }
+
+        // Lọc project theo mentorId
         return projectRepository.findAll().stream()
+                .filter(p -> p.getMentor() != null && p.getMentor().getId().equals(mentorId))
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
 
-    // ✅ HR tạo project
+
+    // ✅ Mentor tạo project
     public ProjectRequest createProject(ProjectRequest request, Long userId) {
-        Long hrId = hrContextService.getHrIdFromUserId(userId);
-        if (hrId == null) {
+        Long mentorId = mentorContextService.getMentorIdFromUserId(userId);
+        if (mentorId == null) {
             throw new RuntimeException("Bạn không có quyền tạo project!");
         }
 
-        // Có thể chọn mentor (nếu truyền vào mentorId)
-        Mentors mentor = null;
-        if (request.getMentorId() != null) {
-            mentor = mentorRepository.findById(request.getMentorId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy mentor với id = " + request.getMentorId()));
-        }
+        // ✅ Gán mentor đang đăng nhập cho project
+        Mentors mentor = mentorRepository.findById(mentorId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy mentor với id = " + mentorId));
 
         Project project = toEntity(request, mentor);
         Project saved = projectRepository.save(project);
+
         return toDto(saved);
     }
 
-    // ✅ HR cập nhật project
+    // ✅ Mentor cập nhật project của chính mình
     public ProjectRequest updateProject(Long id, ProjectRequest request, Long userId) {
-        Long hrId = hrContextService.getHrIdFromUserId(userId);
-        if (hrId == null) {
+        Long mentorId = mentorContextService.getMentorIdFromUserId(userId);
+        if (mentorId == null) {
             throw new RuntimeException("Bạn không có quyền cập nhật project!");
         }
 
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy project với id = " + id));
 
+        // ✅ Chỉ mentor sở hữu project mới được chỉnh sửa
+        if (!project.getMentor().getId().equals(mentorId)) {
+            throw new RuntimeException("Bạn không thể chỉnh sửa project của mentor khác!");
+        }
+
         project.setTitle(request.getTitle());
         project.setDescription(request.getDescription());
         project.setCapacity(request.getCapacity());
-
-        // Cập nhật mentor nếu có thay đổi
-        if (request.getMentorId() != null) {
-            Mentors mentor = mentorRepository.findById(request.getMentorId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy mentor với id = " + request.getMentorId()));
-            project.setMentor(mentor);
-        }
 
         Project updated = projectRepository.save(project);
         return toDto(updated);
     }
 
-    // ✅ HR xóa project
+    // ✅ Mentor xóa project của chính mình
     public void deleteProject(Long id, Long userId) {
-        Long hrId = hrContextService.getHrIdFromUserId(userId);
-        if (hrId == null) {
+        Long mentorId = mentorContextService.getMentorIdFromUserId(userId);
+        if (mentorId == null) {
             throw new RuntimeException("Bạn không có quyền xóa project!");
         }
 
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy project với id = " + id));
 
+        // ✅ Chỉ mentor sở hữu project mới được xóa
+        if (!project.getMentor().getId().equals(mentorId)) {
+            throw new RuntimeException("Bạn không thể xóa project của mentor khác!");
+        }
+
         projectRepository.delete(project);
     }
+
 
     // ✅ HR thêm intern vào project
     public ProjectRequest addInternToProject(Long projectId, Long internId, Long userId) {
