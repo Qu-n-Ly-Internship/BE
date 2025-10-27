@@ -89,4 +89,15 @@ public class ProjectController {
         }
     }
 
+    // ✅ API filter
+    @GetMapping("/filter")
+    public List<ProjectRequest> filterProjects(
+            @RequestParam(required = false) Long programId,
+            @RequestParam(required = false) Long departmentId
+    ) {
+        return projectService.filterProjects(programId, departmentId);
+    }
+
+
+
 }
