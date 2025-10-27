@@ -1,11 +1,13 @@
 package com.example.be.service;
 
 import com.example.be.dto.DepartmentRequest;
+import com.example.be.dto.MentorDepartmentRequest;
 import com.example.be.entity.Department;
 import com.example.be.entity.Hr;
-import com.example.be.entity.Program;
+import com.example.be.entity.Mentors;
 import com.example.be.repository.DepartmentRepository;
 import com.example.be.repository.HrRepository;
+import com.example.be.repository.MentorRepository;
 import com.example.be.repository.ProgramRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -21,18 +23,24 @@ public class DepartmentService {
     private final DepartmentRepository departmentRepository;
     private final ProgramRepository programRepository;
     private final HrRepository hrRepository;
+    private final MentorRepository mentorRepository;
     private final HrContextService hrContextService;
+    private final MentorContextService mentorContextService;
 
     public DepartmentService(
             DepartmentRepository departmentRepository,
             ProgramRepository programRepository,
             HrRepository hrRepository,
-            HrContextService hrContextService
+            MentorRepository mentorRepository,
+            HrContextService hrContextService,
+            MentorContextService mentorContextService
     ) {
         this.departmentRepository = departmentRepository;
         this.programRepository = programRepository;
         this.hrRepository = hrRepository;
+        this.mentorRepository = mentorRepository;
         this.hrContextService = hrContextService;
+        this.mentorContextService = mentorContextService;
     }
 
 
@@ -58,7 +66,7 @@ public class DepartmentService {
         Hr hr = hrRepository.findById(hrId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy HR với id = " + hrId));
 
-        Program program = programRepository.findById(programId)
+        programRepository.findById(programId)
                 .orElseThrow(() -> new RuntimeException("Program không tồn tại với id = " + programId));
 
         // Validate tên phòng ban
@@ -78,7 +86,7 @@ public class DepartmentService {
         Hr hr = hrRepository.findById(hrId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy HR với id = " + hrId));
 
-        Program program = programRepository.findById(programId)
+        programRepository.findById(programId)
                 .orElseThrow(() -> new RuntimeException("Program không tồn tại với id = " + programId));
 
         for (Department d : departments) {
@@ -114,5 +122,66 @@ public class DepartmentService {
             throw new RuntimeException("Department không tồn tại");
         }
         departmentRepository.deleteById(id);
+    }
+
+    // ========== QUẢN LÝ MENTOR TRONG DEPARTMENT ==========
+    // ✅ Lấy danh sách mentor trong department
+    public List<MentorDepartmentRequest> getMentorsByDepartment(Long departmentId) {
+        Department department = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new RuntimeException("Department không tồn tại với id = " + departmentId));
+
+        List<Mentors> mentors = mentorRepository.findByDepartment(department);
+
+        return mentors.stream()
+                .map(m -> new MentorDepartmentRequest(
+                        m.getId(),
+                        m.getDepartment() != null ? m.getDepartment().getId() : null,
+                        m.getFullName(),
+                        department.getNameDepartment()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    // ✅ Thêm mentor vào department (dựa theo mentorId)
+    public Mentors addMentorToDepartment(Long departmentId, Long mentorId) {
+        Department department = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new RuntimeException("Department không tồn tại với id = " + departmentId));
+
+        Mentors mentor = mentorRepository.findById(mentorId)
+                .orElseThrow(() -> new RuntimeException("Mentor không tồn tại với id = " + mentorId));
+
+        if (mentor.getDepartment() != null) {
+            throw new RuntimeException("Mentor đã thuộc department khác");
+        }
+
+        mentor.setDepartment(department);
+        return mentorRepository.save(mentor);
+    }
+
+    // ✅ Cập nhật department của mentor (dựa theo mentorId)
+    public Mentors updateMentorDepartment(Long mentorId, Long newDepartmentId) {
+        Mentors mentor = mentorRepository.findById(mentorId)
+                .orElseThrow(() -> new RuntimeException("Mentor không tồn tại với id = " + mentorId));
+
+        Department newDepartment = departmentRepository.findById(newDepartmentId)
+                .orElseThrow(() -> new RuntimeException("Department không tồn tại với id = " + newDepartmentId));
+
+        mentor.setDepartment(newDepartment);
+        return mentorRepository.save(mentor);
+    }
+
+    // ✅ Xóa mentor khỏi department (dựa theo mentorId)
+    public void removeMentorFromDepartment(Long mentorId) {
+        Mentors mentor = mentorRepository.findById(mentorId)
+                .orElseThrow(() -> new RuntimeException("Mentor không tồn tại với id = " + mentorId));
+
+        mentor.setDepartment(null);
+        mentorRepository.save(mentor);
+    }
+
+
+    // ✅ Lấy danh sách mentor chưa thuộc department nào
+    public List<Mentors> getAvailableMentors() {
+        return mentorRepository.findByDepartmentIsNull();
     }
 }

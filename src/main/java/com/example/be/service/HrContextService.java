@@ -22,9 +22,9 @@ public class HrContextService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy User với id = " + userId));
 
-        Hr hr = hrRepository.findByUser_Id(userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy HR tương ứng với user id = " + userId));
+        return hrRepository.findByUser_Id(userId)
 
-        return hr.getId();
+                .map(Hr::getId)
+                .orElse(null);
     }
 }

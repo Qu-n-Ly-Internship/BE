@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -22,8 +22,7 @@ public class AdminController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Tạo tài khoản thất bại: " + e.getMessage()
-            ));
+                    "message", "Tạo tài khoản thất bại: " + e.getMessage()));
         }
     }
 
@@ -35,15 +34,13 @@ public class AdminController {
             @RequestParam(value = "status", defaultValue = "") String status,
             @RequestParam(value = "excludeInternProfiles", defaultValue = "false") boolean excludeInternProfiles,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size
-    ) {
+            @RequestParam(value = "size", defaultValue = "20") int size) {
         try {
             Map<String, Object> result = adminService.getUsers(query, role, status, excludeInternProfiles, page, size);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Không thể tải danh sách: " + e.getMessage()
-            ));
+                    "message", "Không thể tải danh sách: " + e.getMessage()));
         }
     }
 
@@ -55,8 +52,7 @@ public class AdminController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Cập nhật thất bại: " + e.getMessage()
-            ));
+                    "message", "Cập nhật thất bại: " + e.getMessage()));
         }
     }
 
@@ -66,12 +62,10 @@ public class AdminController {
         try {
             adminService.deleteUser(id);
             return ResponseEntity.ok(Map.of(
-                    "message", "Xóa thành công"
-            ));
+                    "message", "Xóa thành công"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Xóa thất bại: " + e.getMessage()
-            ));
+                    "message", "Xóa thất bại: " + e.getMessage()));
         }
     }
 
@@ -83,8 +77,7 @@ public class AdminController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Duyệt thất bại: " + e.getMessage()
-            ));
+                    "message", "Duyệt thất bại: " + e.getMessage()));
         }
     }
 
@@ -96,8 +89,7 @@ public class AdminController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Khóa thất bại: " + e.getMessage()
-            ));
+                    "message", "Khóa thất bại: " + e.getMessage()));
         }
     }
 
@@ -109,8 +101,22 @@ public class AdminController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Reset thất bại: " + e.getMessage()
-            ));
+                    "message", "Reset thất bại: " + e.getMessage()));
+        }
+    }
+
+    // Thống kê số lượng user theo role
+    @GetMapping("/stats/roles")
+    public ResponseEntity<?> getUserRoleStats() {
+        try {
+            List<Map<String, Object>> result = adminService.getUserRoleStats();
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", result));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi khi thống kê roles: " + e.getMessage()));
         }
     }
 }

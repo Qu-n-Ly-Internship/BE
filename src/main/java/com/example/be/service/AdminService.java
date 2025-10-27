@@ -83,8 +83,7 @@ public class AdminService {
                     "username", savedUser.getUsername(),
                     "role", savedUser.getRole().getName(),
                     "status", savedUser.getStatus(),
-                    "message", "Tạo tài khoản thành công!"
-            );
+                    "message", "Tạo tài khoản thành công!");
 
         } catch (Exception e) {
             throw new RuntimeException("Tạo tài khoản thất bại: " + e.getMessage(), e);
@@ -119,24 +118,26 @@ public class AdminService {
     }
 
     public Map<String, Object> getUsers(String query, String role, String status,
-                                        boolean excludeInternProfiles, int page, int size) {
+            boolean excludeInternProfiles, int page, int size) {
         try {
             List<Object> params = new ArrayList<>();
             List<Object> countParams = new ArrayList<>();
 
             String baseSql = """
-            FROM users u
-            JOIN roles r ON u.role_id = r.role_id
-            WHERE 1=1
-        """;
+                        FROM users u
+                        JOIN roles r ON u.role_id = r.role_id
+                        WHERE 1=1
+                    """;
 
             StringBuilder condition = new StringBuilder();
 
             if (query != null && !query.isEmpty()) {
                 condition.append(" AND (u.fullname LIKE ? OR u.email LIKE ?)");
                 String pattern = "%" + query + "%";
-                params.add(pattern); params.add(pattern);
-                countParams.add(pattern); countParams.add(pattern);
+                params.add(pattern);
+                params.add(pattern);
+                countParams.add(pattern);
+                countParams.add(pattern);
             }
 
             if (role != null && !role.isEmpty()) {
@@ -157,8 +158,8 @@ public class AdminService {
 
             // --- Truy vấn dữ liệu phân trang ---
             String sql = """
-            SELECT u.user_id AS id, u.fullname AS fullName, u.email, u.status, r.name AS role
-        """ + baseSql + condition + " ORDER BY u.fullname LIMIT ? OFFSET ?";
+                        SELECT u.user_id AS id, u.fullname AS fullName, u.email, u.status, r.name AS role
+                    """ + baseSql + condition + " ORDER BY u.fullname LIMIT ? OFFSET ?";
 
             params.add(size);
             params.add(page * size);
@@ -174,8 +175,7 @@ public class AdminService {
                     "content", users,
                     "total", total,
                     "totalPages", totalPages,
-                    "totalUsers", total
-            );
+                    "totalUsers", total);
         } catch (Exception e) {
             throw new RuntimeException("Không thể tải danh sách: " + e.getMessage());
         }
@@ -273,14 +273,12 @@ public class AdminService {
             User savedUser = userRepository.save(user);
 
             return Map.of(
-                "message", "Đã reset user " + user.getEmail() + " về role USER và status PENDING!",
-                "user", Map.of(
-                    "id", savedUser.getId(),
-                    "email", savedUser.getEmail(),
-                    "role", savedUser.getRole().getName(),
-                    "status", savedUser.getStatus()
-                )
-            );
+                    "message", "Đã reset user " + user.getEmail() + " về role USER và status PENDING!",
+                    "user", Map.of(
+                            "id", savedUser.getId(),
+                            "email", savedUser.getEmail(),
+                            "role", savedUser.getRole().getName(),
+                            "status", savedUser.getStatus()));
         } catch (Exception e) {
             throw new RuntimeException("Reset thất bại: " + e.getMessage());
         }
@@ -298,4 +296,16 @@ public class AdminService {
             user.setUsername(finalUsername);
         }
     }
+
+    // Lấy thống kê số lượng user theo role
+    public List<Map<String, Object>> getUserRoleStats() {
+        String sql = """
+                    SELECT r.name AS role, COUNT(u.user_id) AS count
+                    FROM users u
+                    LEFT JOIN roles r ON u.role_id = r.role_id
+                    GROUP BY r.name
+                """;
+        return jdbcTemplate.queryForList(sql);
+    }
+
 }

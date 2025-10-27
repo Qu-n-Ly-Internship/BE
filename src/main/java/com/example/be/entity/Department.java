@@ -1,7 +1,9 @@
 package com.example.be.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "department")
@@ -27,12 +29,25 @@ public class Department {
     @JsonBackReference
     private Hr hr;
 
+    // ✅ Danh sách mentor trong department
+    @OneToMany(mappedBy = "department", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<Mentors> mentors;
+
     public Hr getHr() {
         return hr;
     }
 
     public void setHr(Hr hr) {
         this.hr = hr;
+    }
+
+    public List<Mentors> getMentors() {
+        return mentors;
+    }
+
+    public void setMentors(List<Mentors> mentors) {
+        this.mentors = mentors;
     }
 
 
