@@ -1,6 +1,7 @@
 package com.example.be.service;
 
 import com.example.be.dto.DepartmentRequest;
+import com.example.be.dto.MentorDepartmentDTO;
 import com.example.be.dto.MentorDepartmentRequest;
 import com.example.be.entity.Department;
 import com.example.be.entity.Hr;
@@ -142,8 +143,7 @@ public class DepartmentService {
                 .collect(Collectors.toList());
     }
 
-    // ✅ Thêm mentor vào department (dựa theo mentorId)
-    public Mentors addMentorToDepartment(Long departmentId, Long mentorId) {
+    public MentorDepartmentDTO addMentorToDepartment(Long departmentId, Long mentorId) {
         Department department = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Department không tồn tại với id = " + departmentId));
 
@@ -155,20 +155,41 @@ public class DepartmentService {
         }
 
         mentor.setDepartment(department);
-        return mentorRepository.save(mentor);
+        Mentors saved = mentorRepository.save(mentor);
+
+        // ✅ Trả về DTO — không còn vòng lặp entity
+        return new MentorDepartmentDTO(
+                saved.getId(),
+                saved.getFullName(),
+                saved.getUser() != null ? saved.getUser().getEmail() : null,
+                department.getId(),
+                department.getNameDepartment()
+        );
     }
 
-    // ✅ Cập nhật department của mentor (dựa theo mentorId)
-    public Mentors updateMentorDepartment(Long mentorId, Long newDepartmentId) {
+
+
+    // ✅ Cập nhật mentor sang department khác (trả DTO thay vì entity)
+    public MentorDepartmentDTO updateMentorDepartment(Long mentorId, Long newDepartmentId) {
         Mentors mentor = mentorRepository.findById(mentorId)
-                .orElseThrow(() -> new RuntimeException("Mentor không tồn tại với id = " + mentorId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy mentor với id = " + mentorId));
 
         Department newDepartment = departmentRepository.findById(newDepartmentId)
-                .orElseThrow(() -> new RuntimeException("Department không tồn tại với id = " + newDepartmentId));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy department với id = " + newDepartmentId));
 
         mentor.setDepartment(newDepartment);
-        return mentorRepository.save(mentor);
+        Mentors updatedMentor = mentorRepository.save(mentor);
+
+        // 🔁 Trả về DTO để frontend dùng
+        return new MentorDepartmentDTO(
+                updatedMentor.getId(),
+                updatedMentor.getFullName(),
+                updatedMentor.getUser() != null ? updatedMentor.getUser().getEmail() : null,
+                newDepartment.getId(),
+                newDepartment.getNameDepartment()
+        );
     }
+
 
     // ✅ Xóa mentor khỏi department (dựa theo mentorId)
     public void removeMentorFromDepartment(Long mentorId) {
