@@ -176,4 +176,55 @@ public class ProjectService {
                 .internNames(internNames)
                 .build();
     }
+
+    // ✅ HR chuyển intern sang project khác
+    public InternProfile transferInternToAnotherProject(Long internId, Long newProjectId, Long userId) {
+        // 1️⃣ Xác thực HR
+        Long hrId = hrContextService.getHrIdFromUserId(userId);
+        if (hrId == null) {
+            throw new RuntimeException("Bạn không có quyền chuyển intern giữa các project!");
+        }
+
+        // 2️⃣ Tìm intern
+        InternProfile intern = internProfileRepository.findById(internId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thực tập sinh có ID: " + internId));
+
+        // 3️⃣ Tìm project mới
+        Project newProject = projectRepository.findById(newProjectId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy project có ID: " + newProjectId));
+
+        // 4️⃣ Kiểm tra trùng lặp
+        if (intern.getProgram() != null && intern.getProgram().getId().equals(newProjectId)) {
+            throw new RuntimeException("Intern đã thuộc project này rồi.");
+        }
+
+        // 5️⃣ Cập nhật project mới
+        intern.setProgram(newProject);
+        return internProfileRepository.save(intern);
+    }
+
+
+    // ✅ HR xóa intern khỏi project
+    public InternProfile removeInternFromProject(Long internId, Long userId) {
+        // 1️⃣ Xác thực HR
+        Long hrId = hrContextService.getHrIdFromUserId(userId);
+        if (hrId == null) {
+            throw new RuntimeException("Bạn không có quyền xóa intern khỏi project!");
+        }
+
+        // 2️⃣ Tìm intern
+        InternProfile intern = internProfileRepository.findById(internId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thực tập sinh có ID: " + internId));
+
+        // 3️⃣ Kiểm tra xem intern có đang thuộc project không
+        if (intern.getProgram() == null) {
+            throw new RuntimeException("Intern này hiện không thuộc bất kỳ project nào.");
+        }
+
+        // 4️⃣ Gỡ liên kết với project
+        intern.setProgram(null);
+        return internProfileRepository.save(intern);
+    }
+
+
 }
