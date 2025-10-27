@@ -3,6 +3,7 @@ package com.example.be.controller;
 import com.example.be.dto.ProjectRequest;
 import com.example.be.entity.InternProfile;
 import com.example.be.service.ProjectService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -58,5 +59,34 @@ public class ProjectController {
         return projectService.addInternToProject(projectId, internId, userId);
     }
 
+
+    // ✅ API: HR chuyển intern sang project khác
+    @PutMapping("/transfer-intern")
+    public ResponseEntity<?> transferInternToAnotherProject(
+            @RequestParam Long internId,
+            @RequestParam Long newProjectId,
+            @RequestParam Long userId
+    ) {
+        try {
+            InternProfile updated = projectService.transferInternToAnotherProject(internId, newProjectId, userId);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // ✅ API: HR xóa intern khỏi project
+    @PutMapping("/remove-intern")
+    public ResponseEntity<?> removeInternFromProject(
+            @RequestParam Long internId,
+            @RequestParam Long userId
+    ) {
+        try {
+            InternProfile updated = projectService.removeInternFromProject(internId, userId);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
 }

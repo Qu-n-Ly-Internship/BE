@@ -18,5 +18,5 @@ public class ProjectRequest {
     private Long mentorId;
     private String mentorName;
 
-    private List<String> internNames; // danh sách tên intern tham gia chương trình
+    private List<InternRequest> internNames;
 }
