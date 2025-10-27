@@ -198,4 +198,26 @@ public class AllowanceController {
             ));
         }
     }
+    // 13. Lấy lịch sử phụ cấp của thực tập sinh hiện tại
+    @PostMapping("/my-history")
+    public ResponseEntity<?> getMyAllowanceHistory(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Email không được để trống"
+                ));
+            }
+
+            Map<String, Object> result = allowanceService.getMyAllowanceHistory(email);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi: " + e.getMessage()
+            ));
+        }
+    }
 }
