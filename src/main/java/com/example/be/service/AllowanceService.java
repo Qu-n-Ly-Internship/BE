@@ -9,12 +9,17 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import com.example.be.entity.User;
+import com.example.be.repository.UserRepository;
+import com.example.be.service.JwtService;
 
 @Service
 @RequiredArgsConstructor
 public class AllowanceService {
     private final AllowancePaymentRepository allowanceRepository;
     private final InternProfileRepository internProfileRepository;
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     // Lấy danh sách phụ cấp với filter - ✅ FIX LỖI PARSE VÀ NULL SAFETY
     public Map<String, Object> getAllAllowances(String internId, String startDate, String endDate, int page, int size) {
@@ -532,5 +537,60 @@ public class AllowanceService {
             throw new RuntimeException("Lỗi khi xuất báo cáo: " + e.getMessage());
         }
 
+    }
+    // Lấy lịch sử phụ cấp của thực tập sinh hiện tại
+    public Map<String, Object> getMyAllowanceHistory(String email) {
+        try {
+            // ✅ Kiểm tra email có tồn tại không
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user với email: " + email));
+
+            // Tìm intern profile từ user_id
+            InternProfile intern = internProfileRepository.findByUser_Id(user.getId())
+                    .orElseThrow(() -> new RuntimeException("Bạn không phải là thực tập sinh"));
+
+            // Lấy danh sách phụ cấp của intern này
+            List<AllowancePayment> allowances = allowanceRepository.findByIntern_Id(intern.getId());
+
+            List<Map<String, Object>> data = new ArrayList<>();
+            for (AllowancePayment a : allowances) {
+                if (a.getPaidAt() != null) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("allowanceId", a.getId());
+                    map.put("allowanceType", a.getAllowanceType() != null ? a.getAllowanceType() : "");
+                    map.put("amount", a.getAmount());
+                    map.put("applyDate", a.getDate());
+                    map.put("paidAt", a.getPaidAt());
+                    map.put("note", a.getNote() != null ? a.getNote() : "");
+                    data.add(map);
+                }
+            }
+
+            data.sort((a, b) -> {
+                LocalDate dateA = (LocalDate) a.get("applyDate");
+                LocalDate dateB = (LocalDate) b.get("applyDate");
+                return dateB.compareTo(dateA);
+            });
+
+            Double totalReceived = allowances.stream()
+                    .filter(a -> a.getPaidAt() != null)
+                    .mapToDouble(AllowancePayment::getAmount)
+                    .sum();
+
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("totalReceived", totalReceived);
+            summary.put("totalRecords", data.size());
+            summary.put("internName", intern.getFullName());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", data);
+            response.put("summary", summary);
+
+            return response;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi lấy lịch sử phụ cấp: " + e.getMessage());
+        }
     }
 }
