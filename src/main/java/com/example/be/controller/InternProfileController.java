@@ -100,4 +100,27 @@ public class InternProfileController {
                     "message", "Lỗi khi thống kê trạng thái thực tập sinh: " + e.getMessage()));
         }
     }
+
+
+    @GetMapping("/programs")
+    public ResponseEntity<?> getAllPrograms() {
+        try {
+            String sql = """
+                SELECT DISTINCT title 
+                FROM intern_programs 
+                WHERE title IS NOT NULL 
+                ORDER BY title
+                """;
+
+            List<String> programs = jdbcTemplate.queryForList(sql, String.class);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", programs));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi khi tải danh sách chương trình: " + e.getMessage()));
+        }
+    }
 }
