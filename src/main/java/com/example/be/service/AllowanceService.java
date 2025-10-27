@@ -71,7 +71,8 @@ public class AllowanceService {
                 map.put("date", a.getDate());
                 map.put("paidAt", a.getPaidAt());
                 map.put("note", a.getNote() != null ? a.getNote() : "");
-                map.put("allowType", a.getAllowanceType() != null ? a.getAllowanceType() : "");
+                // ✅ FIX: Change "allowType" to "allowanceType"
+                map.put("allowanceType", a.getAllowanceType() != null ? a.getAllowanceType() : "");
                 data.add(map);
             }
 
@@ -114,7 +115,8 @@ public class AllowanceService {
                             "createdAt", allowance.getCreatedAt(),
                             "paidAt", allowance.getPaidAt(),
                             "note", allowance.getNote() != null ? allowance.getNote() : "",
-                            "allowType", allowance.getAllowanceType() != null ? allowance.getAllowanceType() : ""
+                            // ✅ FIX: Change "allowType" to "allowanceType"
+                            "allowanceType", allowance.getAllowanceType() != null ? allowance.getAllowanceType() : ""
                     )
             );
         } catch (Exception e) {
@@ -140,7 +142,8 @@ public class AllowanceService {
             Double amount = Double.parseDouble(request.get("amount").toString());
             LocalDate date = LocalDate.parse(request.get("date").toString());
             String note = (String) request.getOrDefault("note", "");
-            String allowanceType = (String) request.getOrDefault("allowType", "");
+            // ✅ FIX: Change "allowType" to "allowanceType" to match frontend
+            String allowanceType = (String) request.getOrDefault("allowanceType", "");
 
             if (amount <= 0) {
                 throw new IllegalArgumentException("Số tiền phụ cấp phải lớn hơn 0");
@@ -169,7 +172,8 @@ public class AllowanceService {
                             "internName", saved.getIntern().getFullName(),
                             "amount", saved.getAmount(),
                             "date", saved.getDate(),
-                            "paidAt", saved.getPaidAt()
+                            "paidAt", saved.getPaidAt(),
+                            "allowanceType", saved.getAllowanceType() != null ? saved.getAllowanceType() : ""
                     )
             );
         } catch (NumberFormatException e) {
@@ -201,8 +205,9 @@ public class AllowanceService {
                 allowance.setNote((String) request.get("note"));
             }
 
-            if (request.containsKey("allowType")) {
-                allowance.setAllowanceType((String) request.get("allowType"));
+            // ✅ FIX: Change "allowType" to "allowanceType"
+            if (request.containsKey("allowanceType")) {
+                allowance.setAllowanceType((String) request.get("allowanceType"));
             }
 
             AllowancePayment saved = allowanceRepository.save(allowance);
@@ -213,7 +218,8 @@ public class AllowanceService {
                     "data", Map.of(
                             "allowanceId", saved.getId(),
                             "amount", saved.getAmount(),
-                            "date", saved.getDate()
+                            "date", saved.getDate(),
+                            "allowanceType", saved.getAllowanceType() != null ? saved.getAllowanceType() : ""
                     )
             );
         } catch (Exception e) {
@@ -357,6 +363,7 @@ public class AllowanceService {
                 map.put("internName", a.getIntern().getFullName());
                 map.put("amount", a.getAmount());
                 map.put("paidAt", a.getPaidAt());
+                map.put("allowanceType", a.getAllowanceType() != null ? a.getAllowanceType() : "");
                 details.add(map);
             }
 
