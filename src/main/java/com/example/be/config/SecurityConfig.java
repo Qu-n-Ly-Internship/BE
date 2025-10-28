@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/api/programs/**",
                                 "/api/departments/**",
                                 "api/projects/**",
+                                "api/reports/**",
 
 
 
