@@ -30,11 +30,6 @@ public class Evaluation {
     @JoinColumn(name = "mentor_id")
     private Mentors mentorEvaluator;
 
-    // HR đánh giá (nếu có)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "hr_id")
-    private Hr hrEvaluator;
-
     @Column(columnDefinition = "TEXT")
     private String comment;
 

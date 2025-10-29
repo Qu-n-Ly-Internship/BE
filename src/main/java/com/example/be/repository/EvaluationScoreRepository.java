@@ -10,4 +10,7 @@ public interface EvaluationScoreRepository extends JpaRepository<EvaluationScore
 
     // ✅ Truy vấn tất cả EvaluationScore theo evaluation_id
     List<EvaluationScore> findByEvaluation_EvaluationId(Long evaluationId);
+
+    void deleteByEvaluation_EvaluationId(Long evaluationId);
+
 }

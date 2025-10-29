@@ -1,15 +1,18 @@
 package com.example.be.service;
 
 import com.example.be.dto.EvaluationRequest;
-import com.example.be.dto.EvaluationReponse;
+import com.example.be.dto.EvaluationResponse;
+import com.example.be.dto.EvaluationScoreResponse;
 import com.example.be.entity.*;
 import com.example.be.repository.*;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Transactional
 @Service
 public class ReportService {
 
@@ -38,24 +41,46 @@ public class ReportService {
     }
 
     // ============================================================
-    // 🧠 MENTOR đánh giá Intern (theo weekly hoặc monthly)
+    // 📋 Lấy tất cả evaluations của một intern
     // ============================================================
-    public EvaluationReponse createMentorEvaluation(EvaluationRequest request) {
-        // Lấy mentorId từ userId
+    public List<EvaluationResponse> getEvaluationsByInternId(Long internId) {
+        List<Evaluation> evaluations = evaluationRepository.findByIntern_Id(internId);
+
+        return evaluations.stream().map(e -> EvaluationResponse.builder()
+                .evaluationId(e.getEvaluationId())
+                .internId(e.getIntern().getId())
+                .internName(e.getIntern().getFullName())
+                .comment(e.getComment())
+                .cycle(e.getCycle()) // hoặc getCycleType nếu entity có tên khác
+                .periodNo(e.getPeriodNo())
+                .scores(e.getScores() != null
+                        ? e.getScores().stream()
+                        .map(s -> new EvaluationScoreResponse(
+                                s.getCriteriaName(),
+                                s.getScore(),
+                                s.getComment()
+                        ))
+                        .toList()
+                        : null)
+                .build()
+        ).toList();
+    }
+
+    // ============================================================
+    // 🧠 MENTOR đánh giá Intern (tạo mới)
+    // ============================================================
+    public EvaluationResponse createMentorEvaluation(EvaluationRequest request) {
         Long mentorId = mentorContextService.getMentorIdFromUserId(request.getUserId());
         if (mentorId == null) {
             throw new RuntimeException("Không tìm thấy mentor tương ứng với userId: " + request.getUserId());
         }
 
-        // Lấy thông tin intern
         InternProfile intern = internRepository.findById(request.getInternId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy intern có ID: " + request.getInternId()));
 
-        // Lấy thông tin mentor
         Mentors mentor = mentorRepository.findById(mentorId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy mentor có ID: " + mentorId));
 
-        // Tạo evaluation
         Evaluation evaluation = new Evaluation();
         evaluation.setMentorEvaluator(mentor);
         evaluation.setIntern(intern);
@@ -64,7 +89,6 @@ public class ReportService {
         evaluation.setPeriodNo(request.getPeriodNo());
         evaluation.setCreatedAt(LocalDateTime.now());
 
-        // Lưu evaluation
         Evaluation savedEvaluation = evaluationRepository.save(evaluation);
 
         // Lưu các score
@@ -77,87 +101,108 @@ public class ReportService {
                 s.setComment(scoreReq.getComment());
                 return s;
             }).collect(Collectors.toList());
-
             evaluationScoreRepository.saveAll(scoreEntities);
         }
 
         // Lấy lại danh sách score sau khi lưu
         List<EvaluationScore> scores = evaluationScoreRepository.findByEvaluation_EvaluationId(savedEvaluation.getEvaluationId());
 
-        // Build response (chỉ trả về dữ liệu cần thiết)
-        return EvaluationReponse.builder()
+        return EvaluationResponse.builder()
                 .evaluationId(savedEvaluation.getEvaluationId())
+                .internId(intern.getId())
+                .internName(intern.getFullName())
                 .comment(savedEvaluation.getComment())
                 .cycle(savedEvaluation.getCycle())
                 .periodNo(savedEvaluation.getPeriodNo())
-                .createdAt(savedEvaluation.getCreatedAt())
                 .mentorName(mentor.getFullName())
-                .hrName(null)
+                .createdAt(savedEvaluation.getCreatedAt())
                 .scores(scores.stream()
-                        .map(s -> new EvaluationReponse.ScoreResponse(s.getCriteriaName(), s.getScore(), s.getComment()))
+                        .map(s -> new EvaluationScoreResponse(
+                                s.getCriteriaName(),
+                                s.getScore(),
+                                s.getComment()))
                         .collect(Collectors.toList()))
                 .build();
     }
 
     // ============================================================
-    // 🧠 HR đánh giá Intern (cố định monthly)
+    // ✏️ MENTOR cập nhật evaluation
     // ============================================================
-    public EvaluationReponse createHrEvaluation(EvaluationRequest request) {
-        // Lấy hrId từ userId
-        Long hrId = hrContextService.getHrIdFromUserId(request.getUserId());
-        if (hrId == null) {
-            throw new RuntimeException("Không tìm thấy HR tương ứng với userId: " + request.getUserId());
+    public EvaluationResponse updateMentorEvaluation(Long evaluationId, EvaluationRequest request) {
+        Long mentorId = mentorContextService.getMentorIdFromUserId(request.getUserId());
+        if (mentorId == null) {
+            throw new RuntimeException("Không tìm thấy mentor tương ứng với userId: " + request.getUserId());
         }
 
-        // Lấy thông tin intern
-        InternProfile intern = internRepository.findById(request.getInternId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy intern có ID: " + request.getInternId()));
+        Evaluation evaluation = evaluationRepository.findById(evaluationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy evaluation có ID: " + evaluationId));
 
-        // Lấy thông tin HR
-        Hr hr = hrRepository.findById(hrId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy HR có ID: " + hrId));
+        // Kiểm tra quyền
+        if (evaluation.getMentorEvaluator() == null ||
+                !evaluation.getMentorEvaluator().getId().equals(mentorId)) {
+            throw new RuntimeException("Bạn không có quyền sửa evaluation này!");
+        }
 
-        // Tạo evaluation
-        Evaluation evaluation = new Evaluation();
-        evaluation.setHrEvaluator(hr);
-        evaluation.setIntern(intern);
+        // Cập nhật thông tin
         evaluation.setComment(request.getComment());
-        evaluation.setCycle("monthly"); // HR luôn theo tháng
+        evaluation.setCycle(request.getCycle());
         evaluation.setPeriodNo(request.getPeriodNo());
-        evaluation.setCreatedAt(LocalDateTime.now());
+        evaluationRepository.save(evaluation);
 
-        // Lưu evaluation
-        Evaluation savedEvaluation = evaluationRepository.save(evaluation);
+        // Xóa score cũ
+        evaluationScoreRepository.deleteByEvaluation_EvaluationId(evaluationId);
 
-        // Lưu các score
+        // Thêm score mới
         if (request.getScores() != null && !request.getScores().isEmpty()) {
-            var scoreEntities = request.getScores().stream().map(scoreReq -> {
+            var newScores = request.getScores().stream().map(scoreReq -> {
                 EvaluationScore s = new EvaluationScore();
-                s.setEvaluation(savedEvaluation);
+                s.setEvaluation(evaluation);
                 s.setCriteriaName(scoreReq.getCriteriaName());
                 s.setScore(scoreReq.getScore());
                 s.setComment(scoreReq.getComment());
                 return s;
             }).collect(Collectors.toList());
-
-            evaluationScoreRepository.saveAll(scoreEntities);
+            evaluationScoreRepository.saveAll(newScores);
         }
 
-        // Lấy lại danh sách score sau khi lưu
-        List<EvaluationScore> scores = evaluationScoreRepository.findByEvaluation_EvaluationId(savedEvaluation.getEvaluationId());
+        List<EvaluationScore> scores = evaluationScoreRepository.findByEvaluation_EvaluationId(evaluationId);
 
-        // Build response
-        return EvaluationReponse.builder()
-                .evaluationId(savedEvaluation.getEvaluationId())
-                .comment(savedEvaluation.getComment())
-                .cycle(savedEvaluation.getCycle())
-                .periodNo(savedEvaluation.getPeriodNo())
-                .createdAt(savedEvaluation.getCreatedAt())
-                .mentorName(null)
-                .hrName(hr.getFullname())
+        return EvaluationResponse.builder()
+                .evaluationId(evaluationId)
+                .internId(evaluation.getIntern().getId())
+                .internName(evaluation.getIntern().getFullName())
+                .comment(evaluation.getComment())
+                .cycle(evaluation.getCycle())
+                .periodNo(evaluation.getPeriodNo())
+                .mentorName(evaluation.getMentorEvaluator().getFullName())
+                .createdAt(evaluation.getCreatedAt())
                 .scores(scores.stream()
-                        .map(s -> new EvaluationReponse.ScoreResponse(s.getCriteriaName(), s.getScore(), s.getComment()))
+                        .map(s -> new EvaluationScoreResponse(
+                                s.getCriteriaName(),
+                                s.getScore(),
+                                s.getComment()))
                         .collect(Collectors.toList()))
                 .build();
+    }
+
+    // ============================================================
+    // ❌ MENTOR xóa evaluation
+    // ============================================================
+    public void deleteMentorEvaluation(Long evaluationId, Long userId) {
+        Long mentorId = mentorContextService.getMentorIdFromUserId(userId);
+        if (mentorId == null) {
+            throw new RuntimeException("Không tìm thấy mentor tương ứng với userId: " + userId);
+        }
+
+        Evaluation evaluation = evaluationRepository.findById(evaluationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy evaluation có ID: " + evaluationId));
+
+        if (evaluation.getMentorEvaluator() == null ||
+                !evaluation.getMentorEvaluator().getId().equals(mentorId)) {
+            throw new RuntimeException("Bạn không có quyền xóa evaluation này!");
+        }
+
+        evaluationScoreRepository.deleteByEvaluation_EvaluationId(evaluationId);
+        evaluationRepository.delete(evaluation);
     }
 }
