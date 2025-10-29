@@ -1,18 +1,9 @@
 package com.example.be.service;
 
 import com.example.be.dto.EvaluationRequest;
-import com.example.be.dto.EvaluationResponse;
-import com.example.be.entity.Evaluation;
-import com.example.be.entity.EvaluationScore;
-import com.example.be.entity.InternProfile;
-import com.example.be.entity.User;
-import com.example.be.enums.CycleType;
-import com.example.be.repository.EvaluationRepository;
-import com.example.be.repository.EvaluationScoreRepository;
-import com.example.be.repository.InternProfileRepository;
-import com.example.be.repository.UserRepository;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import com.example.be.dto.EvaluationReponse;
+import com.example.be.entity.*;
+import com.example.be.repository.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -20,116 +11,152 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class ReportService {
+
     private final EvaluationRepository evaluationRepository;
     private final EvaluationScoreRepository evaluationScoreRepository;
-    private final InternProfileRepository internRepository;
-    private final UserRepository userRepository;
+    private final MentorContextService mentorContextService;
+    private final HrContextService hrContextService;
+    private final InternRepository internRepository;
+    private final MentorRepository mentorRepository;
+    private final HrRepository hrRepository;
 
-    // Tạo mới Evaluation
-    @Transactional
-    public EvaluationResponse createEvaluation(EvaluationRequest req) {
-        InternProfile intern = internRepository.findById(req.getInternId())
-                .orElseThrow(() -> new RuntimeException("Intern not found"));
-        User evaluator = userRepository.findById(req.getEvaluatorId())
-                .orElseThrow(() -> new RuntimeException("Evaluator not found"));
+    public ReportService(EvaluationRepository evaluationRepository,
+                         EvaluationScoreRepository evaluationScoreRepository,
+                         MentorContextService mentorContextService,
+                         HrContextService hrContextService,
+                         InternRepository internRepository,
+                         MentorRepository mentorRepository,
+                         HrRepository hrRepository) {
+        this.evaluationRepository = evaluationRepository;
+        this.evaluationScoreRepository = evaluationScoreRepository;
+        this.mentorContextService = mentorContextService;
+        this.hrContextService = hrContextService;
+        this.internRepository = internRepository;
+        this.mentorRepository = mentorRepository;
+        this.hrRepository = hrRepository;
+    }
 
-        // ✅ Kiểm tra quyền cycleType
-        if (evaluator.getRole().equals("MENTOR") &&
-                (req.getCycle() != CycleType.WEEKLY && req.getCycle() != CycleType.MONTHLY)) {
-            throw new RuntimeException("Mentor chỉ được tạo WEEKLY hoặc MONTHLY evaluation!");
+    // ============================================================
+    // 🧠 MENTOR đánh giá Intern (theo weekly hoặc monthly)
+    // ============================================================
+    public EvaluationReponse createMentorEvaluation(EvaluationRequest request) {
+        // Lấy mentorId từ userId
+        Long mentorId = mentorContextService.getMentorIdFromUserId(request.getUserId());
+        if (mentorId == null) {
+            throw new RuntimeException("Không tìm thấy mentor tương ứng với userId: " + request.getUserId());
         }
-        if (evaluator.getRole().equals("HR") && req.getCycle() == CycleType.WEEKLY) {
-            throw new RuntimeException("HR chỉ được tạo MONTHLY evaluation!");
-        }
 
+        // Lấy thông tin intern
+        InternProfile intern = internRepository.findById(request.getInternId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy intern có ID: " + request.getInternId()));
+
+        // Lấy thông tin mentor
+        Mentors mentor = mentorRepository.findById(mentorId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy mentor có ID: " + mentorId));
+
+        // Tạo evaluation
         Evaluation evaluation = new Evaluation();
+        evaluation.setMentorEvaluator(mentor);
         evaluation.setIntern(intern);
-        evaluation.setEvaluator(evaluator);
-        evaluation.setCycle(req.getCycle());
-        evaluation.setPeriodNo(req.getPeriodNo());
-        evaluation.setComment(req.getComment());
+        evaluation.setComment(request.getComment());
+        evaluation.setCycle(request.getCycle());
+        evaluation.setPeriodNo(request.getPeriodNo());
         evaluation.setCreatedAt(LocalDateTime.now());
 
-        evaluation = evaluationRepository.save(evaluation);
+        // Lưu evaluation
+        Evaluation savedEvaluation = evaluationRepository.save(evaluation);
 
-        Evaluation finalEvaluation = evaluation;
-        List<EvaluationScore> scores = req.getScores().stream().map(s -> {
-            EvaluationScore es = new EvaluationScore();
-            es.setEvaluation(finalEvaluation);
-            es.setCriteriaName(s.getCriteriaName());
-            es.setScore(s.getScore());
-            es.setComment(s.getComment());
-            return es;
-        }).collect(Collectors.toList());
+        // Lưu các score
+        if (request.getScores() != null && !request.getScores().isEmpty()) {
+            var scoreEntities = request.getScores().stream().map(scoreReq -> {
+                EvaluationScore s = new EvaluationScore();
+                s.setEvaluation(savedEvaluation);
+                s.setCriteriaName(scoreReq.getCriteriaName());
+                s.setScore(scoreReq.getScore());
+                s.setComment(scoreReq.getComment());
+                return s;
+            }).collect(Collectors.toList());
 
-        evaluationScoreRepository.saveAll(scores);
-        evaluation.setScores(scores);
+            evaluationScoreRepository.saveAll(scoreEntities);
+        }
 
-        return mapToResponse(evaluation);
+        // Lấy lại danh sách score sau khi lưu
+        List<EvaluationScore> scores = evaluationScoreRepository.findByEvaluation_EvaluationId(savedEvaluation.getEvaluationId());
+
+        // Build response (chỉ trả về dữ liệu cần thiết)
+        return EvaluationReponse.builder()
+                .evaluationId(savedEvaluation.getEvaluationId())
+                .comment(savedEvaluation.getComment())
+                .cycle(savedEvaluation.getCycle())
+                .periodNo(savedEvaluation.getPeriodNo())
+                .createdAt(savedEvaluation.getCreatedAt())
+                .mentorName(mentor.getFullName())
+                .hrName(null)
+                .scores(scores.stream()
+                        .map(s -> new EvaluationReponse.ScoreResponse(s.getCriteriaName(), s.getScore(), s.getComment()))
+                        .collect(Collectors.toList()))
+                .build();
     }
 
-    // Cập nhật Evaluation
-    @Transactional
-    public EvaluationResponse updateEvaluation(Long evaluationId, EvaluationRequest req) {
-        Evaluation evaluation = evaluationRepository.findById(evaluationId)
-                .orElseThrow(() -> new RuntimeException("Evaluation not found"));
+    // ============================================================
+    // 🧠 HR đánh giá Intern (cố định monthly)
+    // ============================================================
+    public EvaluationReponse createHrEvaluation(EvaluationRequest request) {
+        // Lấy hrId từ userId
+        Long hrId = hrContextService.getHrIdFromUserId(request.getUserId());
+        if (hrId == null) {
+            throw new RuntimeException("Không tìm thấy HR tương ứng với userId: " + request.getUserId());
+        }
 
-        evaluation.setComment(req.getComment());
-        evaluation.setCycle(req.getCycle());
-        evaluation.setPeriodNo(req.getPeriodNo());
+        // Lấy thông tin intern
+        InternProfile intern = internRepository.findById(request.getInternId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy intern có ID: " + request.getInternId()));
 
-        evaluation.getScores() .clear();
+        // Lấy thông tin HR
+        Hr hr = hrRepository.findById(hrId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy HR có ID: " + hrId));
 
-        // Thêm scores mới
-        List<EvaluationScore> newScores = req.getScores().stream().map(s -> {
-            EvaluationScore es = new EvaluationScore();
-            es.setEvaluation(evaluation);
-            es.setCriteriaName(s.getCriteriaName());
-            es.setScore(s.getScore());
-            es.setComment(s.getComment());
-            return es;
-        }).collect(Collectors.toList());
+        // Tạo evaluation
+        Evaluation evaluation = new Evaluation();
+        evaluation.setHrEvaluator(hr);
+        evaluation.setIntern(intern);
+        evaluation.setComment(request.getComment());
+        evaluation.setCycle("monthly"); // HR luôn theo tháng
+        evaluation.setPeriodNo(request.getPeriodNo());
+        evaluation.setCreatedAt(LocalDateTime.now());
 
-        evaluation.getScores().addAll(newScores);
+        // Lưu evaluation
+        Evaluation savedEvaluation = evaluationRepository.save(evaluation);
 
-        return mapToResponse(evaluationRepository.save(evaluation));
-    }
+        // Lưu các score
+        if (request.getScores() != null && !request.getScores().isEmpty()) {
+            var scoreEntities = request.getScores().stream().map(scoreReq -> {
+                EvaluationScore s = new EvaluationScore();
+                s.setEvaluation(savedEvaluation);
+                s.setCriteriaName(scoreReq.getCriteriaName());
+                s.setScore(scoreReq.getScore());
+                s.setComment(scoreReq.getComment());
+                return s;
+            }).collect(Collectors.toList());
 
-    // Xóa Evaluation
-    @Transactional
-    public void deleteEvaluation(Long evaluationId) {
-        Evaluation evaluation = evaluationRepository.findById(evaluationId)
-                .orElseThrow(() -> new RuntimeException("Evaluation not found"));
-        evaluationRepository.delete(evaluation);
-    }
+            evaluationScoreRepository.saveAll(scoreEntities);
+        }
 
-    // Lấy evaluation theo intern
-    public List<EvaluationResponse> getEvaluationsByIntern(Long internId) {
-        return evaluationRepository.findByIntern_InternId(internId)
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
+        // Lấy lại danh sách score sau khi lưu
+        List<EvaluationScore> scores = evaluationScoreRepository.findByEvaluation_EvaluationId(savedEvaluation.getEvaluationId());
 
-    // Mapping helper
-    private EvaluationResponse mapToResponse(Evaluation e) {
-        return EvaluationResponse.builder()
-                .evaluationId(e.getEvaluationId())
-                .internId(e.getIntern().getId())
-                .internName(e.getIntern().getFullName())
-                .evaluatorName(e.getEvaluator().getFullName())
-                .cycle(e.getCycle())
-                .periodNo(e.getPeriodNo())
-                .comment(e.getComment())
-                .createdAt(e.getCreatedAt())
-                .scores(e.getScores().stream()
-                        .map(s -> EvaluationResponse.ScoreResponse.builder()
-                                .criteriaName(s.getCriteriaName())
-                                .score(s.getScore())
-                                .comment(s.getComment())
-                                .build())
+        // Build response
+        return EvaluationReponse.builder()
+                .evaluationId(savedEvaluation.getEvaluationId())
+                .comment(savedEvaluation.getComment())
+                .cycle(savedEvaluation.getCycle())
+                .periodNo(savedEvaluation.getPeriodNo())
+                .createdAt(savedEvaluation.getCreatedAt())
+                .mentorName(null)
+                .hrName(hr.getFullname())
+                .scores(scores.stream()
+                        .map(s -> new EvaluationReponse.ScoreResponse(s.getCriteriaName(), s.getScore(), s.getComment()))
                         .collect(Collectors.toList()))
                 .build();
     }

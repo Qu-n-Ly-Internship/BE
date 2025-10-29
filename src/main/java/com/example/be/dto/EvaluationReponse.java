@@ -1,28 +1,30 @@
 package com.example.be.dto;
 
-import com.example.be.enums.CycleType;
-import lombok.Builder;
-import lombok.Data;
 
-import java.math.BigDecimal;
+import lombok.*;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.List;
 
-
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
-public class EvaluationResponse {
+public class EvaluationReponse {
     private Long evaluationId;
-    private Long internId;
-    private String internName;
-    private String evaluatorName;
-    private CycleType cycle;
-    private Integer periodNo;
     private String comment;
+    private String cycle;
+    private Integer periodNo;
     private LocalDateTime createdAt;
+    private String mentorName;
+    private String hrName;
     private List<ScoreResponse> scores;
 
-    @Data
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Builder
     public static class ScoreResponse {
         private String criteriaName;
@@ -30,3 +32,5 @@ public class EvaluationResponse {
         private String comment;
     }
 }
+
+

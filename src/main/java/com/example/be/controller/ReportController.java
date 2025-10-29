@@ -1,39 +1,47 @@
 package com.example.be.controller;
 
 import com.example.be.dto.EvaluationRequest;
-import com.example.be.dto.EvaluationResponse;
+import com.example.be.dto.EvaluationReponse; // Vẫn cần
 import com.example.be.service.ReportService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/reports")
-@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class ReportController {
+
     private final ReportService reportService;
 
-    @PostMapping("/evaluations")
-    public ResponseEntity<EvaluationResponse> create(@RequestBody EvaluationRequest request) {
-        return ResponseEntity.ok(reportService.createEvaluation(request));
+    public ReportController(ReportService reportService) {
+        this.reportService = reportService;
     }
 
-    @PutMapping("/evaluations/{id}")
-    public ResponseEntity<EvaluationResponse> update(
-            @PathVariable Long id, @RequestBody EvaluationRequest request) {
-        return ResponseEntity.ok(reportService.updateEvaluation(id, request));
+    // ✅ MENTOR đánh giá Intern (weekly / monthly)
+    @PostMapping("/mentor")
+    // Sửa kiểu trả về thành ResponseEntity<?>
+    public ResponseEntity<?> createMentorEvaluation(@RequestBody EvaluationRequest request) {
+        try {
+            // Service trả về EvaluationReponse
+            EvaluationReponse evaluationResponse = reportService.createMentorEvaluation(request);
+            return ResponseEntity.ok(evaluationResponse);
+        } catch (RuntimeException e) {
+            // Trả về String trong trường hợp lỗi (status code 400 Bad Request)
+            return ResponseEntity.badRequest().body(" Mentor evaluation failed: " + e.getMessage());
+        }
     }
 
-    @DeleteMapping("/evaluations/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        reportService.deleteEvaluation(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/intern/{internId}")
-    public ResponseEntity<List<EvaluationResponse>> getByIntern(@PathVariable Long internId) {
-        return ResponseEntity.ok(reportService.getEvaluationsByIntern(internId));
+    // ✅ HR đánh giá Intern (chỉ monthly)
+    @PostMapping("/hr")
+    // Sửa kiểu trả về thành ResponseEntity<?>
+    public ResponseEntity<?> createHrEvaluation(@RequestBody EvaluationRequest request) {
+        try {
+            // Service trả về EvaluationReponse
+            EvaluationReponse evaluationResponse = reportService.createHrEvaluation(request);
+            return ResponseEntity.ok(evaluationResponse);
+        } catch (RuntimeException e) {
+            // Trả về String trong trường hợp lỗi (status code 400 Bad Request)
+            return ResponseEntity.badRequest().body(" HR evaluation failed: " + e.getMessage());
+        }
     }
 }

@@ -1,25 +1,20 @@
 package com.example.be.dto;
 
-import com.example.be.enums.CycleType;
-import lombok.Data;
-
+import lombok.Getter;
+import lombok.Setter;
 import java.math.BigDecimal;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 public class EvaluationRequest {
-    private Long internId;
-    private Long evaluatorId; // mentor hoặc HR
-    private CycleType cycle;
-    private Integer periodNo;
-    private String comment;
-    private List<ScoreRequest> scores;
+    private Long evaluationId;
 
-    @Data
-    public static class ScoreRequest {
-        private String criteriaName;
-        private BigDecimal score;
-        private String comment;
-    }
+    private Long userId;
+    private Long internId;
+    private String comment;
+    private String cycle; // chỉ dùng cho mentor (weekly / monthly)
+    private Integer periodNo;
+    private List<EvaluationScoreRequest> scores;
 }
 
