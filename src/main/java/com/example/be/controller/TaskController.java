@@ -27,6 +27,19 @@ public class TaskController {
         }
     }
 
+    // ✅ Lấy lịch thực tập từ tasks (dựa trên userId)
+    @GetMapping("/my-schedule")
+    public ResponseEntity<?> getMySchedule(@RequestParam Long userId) {
+        try {
+            return ResponseEntity.ok(taskService.getMySchedule(userId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi: " + e.getMessage()
+            ));
+        }
+    }
+
     // Lấy danh sách công việc theo intern_id (cho admin/mentor)
     @GetMapping("/intern/{internId}")
     public ResponseEntity<?> getTasksByIntern(@PathVariable Long internId) {

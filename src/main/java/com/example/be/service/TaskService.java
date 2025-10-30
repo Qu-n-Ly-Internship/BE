@@ -90,6 +90,53 @@ public class TaskService {
         }
     }
 
+    // ✅ Lấy lịch thực tập từ tasks (dùng created_at và due_date)
+    public Map<String, Object> getMySchedule(Long userId) {
+        try {
+            Long internId = getInternIdByUserId(userId);
+
+            String sql = """
+                SELECT 
+                    t.task_id,
+                    t.title as task,
+                    t.description,
+                    t.priority,
+                    t.status,
+                    t.created_at as start_date,
+                    t.due_date as end_date,
+                    ip.fullname as intern_name,
+                    'Thực tập' as department
+                FROM task t
+                LEFT JOIN intern_profiles ip ON t.assigned_to = ip.intern_id
+                WHERE t.assigned_to = ?
+                ORDER BY t.created_at DESC
+                """;
+
+            List<Map<String, Object>> schedule = jdbcTemplate.queryForList(sql, internId);
+
+            // Chuyển đổi format cho frontend
+            List<Map<String, Object>> formattedSchedule = new ArrayList<>();
+            for (Map<String, Object> item : schedule) {
+                Map<String, Object> formatted = new HashMap<>();
+                formatted.put("id", item.get("task_id"));
+                formatted.put("task", item.get("task"));
+                formatted.put("description", item.get("description"));
+                formatted.put("priority", item.get("priority"));
+                formatted.put("status", item.get("status"));
+                formatted.put("startDate", item.get("start_date"));
+                formatted.put("endDate", item.get("end_date"));
+                formatted.put("internName", item.get("intern_name"));
+                formatted.put("department", item.get("department"));
+                formattedSchedule.add(formatted);
+            }
+
+            return Map.of("success", true, "data", formattedSchedule);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Map.of("success", false, "message", "Lỗi khi lấy lịch: " + e.getMessage());
+        }
+    }
+
     // Giao công việc mới
     public Map<String, Object> assignTask(Map<String, Object> req) {
         try {
