@@ -1,13 +1,18 @@
 package com.example.be.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+@Setter
+@Getter
+
 @Entity
 @Table(name = "intern_reports")
-public class InternReport {
+public class Report {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long reportId;
@@ -29,6 +34,4 @@ public class InternReport {
     private String recommendations;
 
     private LocalDateTime createdAt;
-
-    private String cloudUrl;
 }

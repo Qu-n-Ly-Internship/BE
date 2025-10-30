@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Repository
 public interface InternRepository extends JpaRepository<InternProfile, Long> {
@@ -67,4 +68,6 @@ public interface InternRepository extends JpaRepository<InternProfile, Long> {
     @Query(value = "SELECT program, COUNT(*) FROM intern_profiles WHERE program IS NOT NULL GROUP BY program",
            nativeQuery = true)
     List<Object[]> countByProgram();
+
+    Optional<InternProfile> findByUser_Id(Long userId);
 }
