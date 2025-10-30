@@ -235,4 +235,22 @@ import java.util.stream.Collectors;
         }
 
 
+        public List<ProjectRequest> filterProjects(Long programId, Long departmentId) {
+            List<Project> projects;
+
+            if (programId != null && departmentId == null) {
+                // ✅ Lọc theo Program (gộp nhiều department)
+                projects = projectRepository.findByMentorDepartmentProgramId(programId);
+            } else if (programId != null && departmentId != null) {
+                // ✅ Lọc theo Department (cần biết program cha)
+                projects = projectRepository.findByMentorDepartmentId(departmentId);
+            } else {
+                throw new IllegalArgumentException("Bạn phải chọn ít nhất một Program trước khi lọc project.");
+            }
+
+            return projects.stream().map(this::toDto).collect(Collectors.toList());
+        }
+
+
+
     }

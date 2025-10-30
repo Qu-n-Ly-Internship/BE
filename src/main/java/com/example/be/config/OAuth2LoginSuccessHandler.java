@@ -50,8 +50,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                         }
                         response.sendRedirect(redirectUrl);
                 } catch (Exception e) {
-                        logger.error("OAuth2 success handler error", e);
-                        response.sendError(500, "OAuth2 login failed: " + e.getMessage());
+                    logger.error("OAuth2 success handler error", e);
+                    response.sendError(500, "OAuth2 login failed: " + e.getMessage());
                 }
         }
 }
