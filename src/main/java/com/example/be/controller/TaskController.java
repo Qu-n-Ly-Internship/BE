@@ -14,7 +14,7 @@ public class TaskController {
 
     private final TaskService taskService;
 
-    // ✅ Lấy tasks của user hiện tại (dựa trên userId)
+    // ✅ Lấy tasks của user hiện tại (dựa trên userId) - Cho INTERN
     @GetMapping("/my-tasks")
     public ResponseEntity<?> getMyTasks(@RequestParam Long userId) {
         try {
@@ -27,11 +27,24 @@ public class TaskController {
         }
     }
 
-    // ✅ Lấy lịch thực tập từ tasks (dựa trên userId)
+    // ✅ Lấy lịch thực tập từ tasks (dựa trên userId) - Cho INTERN
     @GetMapping("/my-schedule")
     public ResponseEntity<?> getMySchedule(@RequestParam Long userId) {
         try {
             return ResponseEntity.ok(taskService.getMySchedule(userId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi: " + e.getMessage()
+            ));
+        }
+    }
+
+    // ✅ Lấy danh sách tasks đã giao (cho MENTOR)
+    @GetMapping("/assigned")
+    public ResponseEntity<?> getAssignedTasks(@RequestParam Long mentorUserId) {
+        try {
+            return ResponseEntity.ok(taskService.getAssignedTasks(mentorUserId));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
@@ -46,10 +59,17 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getTasksByIntern(internId));
     }
 
-    // Giao công việc mới
+    // ✅ Giao công việc mới (cho MENTOR)
     @PostMapping("/assign")
     public ResponseEntity<?> assignTask(@RequestBody Map<String, Object> request) {
-        return ResponseEntity.ok(taskService.assignTask(request));
+        try {
+            return ResponseEntity.ok(taskService.assignTask(request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi: " + e.getMessage()
+            ));
+        }
     }
 
     // Cập nhật trạng thái công việc
