@@ -21,11 +21,13 @@ public class Task {
 
     private String title;
 
-    @ManyToOne
+    // ✅ Sử dụng LAZY loading để tránh JOIN không cần thiết
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to") // intern_id
     private InternProfile assignedTo;
 
-    @ManyToOne
+    // ✅ Sử dụng LAZY loading
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by") // user_id
     private User assignedBy;
 

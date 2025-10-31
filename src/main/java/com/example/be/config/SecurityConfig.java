@@ -53,12 +53,10 @@ public class SecurityConfig {
                                 "/api/profile/**",
                                 "/api/programs/**",
                                 "/api/departments/**",
-                                "api/projects/**",
-                                "api/reports/**",
-                                "api/support-requests/**",
-
-
-
+                                "/api/projects/**",
+                                "/api/reports/**",
+                                "/api/support-requests/**",
+                                "/api/tasks/**",
                                 "/oauth2/**",
                                 "/oauth2/authorization/**",
                                 "/login/oauth2/**",
