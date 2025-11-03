@@ -31,6 +31,22 @@ public class InternSchedule {
     @JoinColumn(name = "task_id")
     private Task task;
 
+    @Column(name = "title", nullable = true)
+    private String title; // Tiêu đề lịch
+
+    private String description; // Mô tả chi tiết
+
+    @Column(name = "start_time")
+    private String startTime; // Thời gian bắt đầu (format: "HH:mm")
+
+    @Column(name = "end_time")
+    private String endTime; // Thời gian kết thúc (format: "HH:mm")
+
+    private String location; // Địa điểm
+
+    @Column(name = "task_type")
+    private String taskType; // Loại công việc: TRAINING, MEETING, TASK, etc.
+
     private LocalDate date;
 
     private String status; // PLANNED / COMPLETED / CANCELLED
