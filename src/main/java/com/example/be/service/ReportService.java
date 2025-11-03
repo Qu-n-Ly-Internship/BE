@@ -102,6 +102,7 @@ public class ReportService {
                 s.setEvaluation(savedEvaluation);
                 s.setCriteriaName(scoreReq.getCriteriaName());
                 s.setScore(scoreReq.getScore());
+
                 s.setComment(scoreReq.getComment());
                 return s;
             }).collect(Collectors.toList());
