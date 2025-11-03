@@ -29,7 +29,7 @@ public class Task {
     // ✅ Sử dụng LAZY loading
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by") // user_id
-    private User assignedBy;
+    private Mentors assignedBy;
 
     private String priority; // LOW, MEDIUM, HIGH
 
