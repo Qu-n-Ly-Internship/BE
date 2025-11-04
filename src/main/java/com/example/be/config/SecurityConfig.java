@@ -56,6 +56,7 @@ public class SecurityConfig {
                                 "/api/projects/**",
                                 "/api/reports/**",
                                 "/api/support-requests/**",
+                                "/api/leave-requests/**",
                                 "/api/tasks/**",
                                 "/api/attendance/**",
                                 "/oauth2/**",
