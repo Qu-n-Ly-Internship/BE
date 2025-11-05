@@ -3,6 +3,7 @@ package com.example.be.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+
 import java.util.List;
 
 @Entity
@@ -52,15 +53,35 @@ public class Department {
 
 
     // --- Getter & Setter ---
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getNameDepartment() { return nameDepartment; }
-    public void setNameDepartment(String nameDepartment) { this.nameDepartment = nameDepartment; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Integer getCapacity() { return capacity; }
-    public void setCapacity(Integer capacity) { this.capacity = capacity; }
+    public String getNameDepartment() {
+        return nameDepartment;
+    }
 
-    public Long getProgramId() { return programId; }
-    public void setProgramId(Long programId) { this.programId = programId; }
+    public void setNameDepartment(String nameDepartment) {
+        this.nameDepartment = nameDepartment;
+    }
+
+    public Integer getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(Integer capacity) {
+        this.capacity = capacity;
+    }
+
+    public Long getProgramId() {
+        return programId;
+    }
+
+    public void setProgramId(Long programId) {
+        this.programId = programId;
+    }
 }

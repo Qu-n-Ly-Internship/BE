@@ -14,19 +14,19 @@ public class MentorService {
     public Map<String, Object> getAllMentors(String query, String department, Boolean available) {
         try {
             StringBuilder sql = new StringBuilder("""
-                SELECT m.mentor_id, m.fullname, u.email,
-                       r.name as role_name,
-                       d.name_department,
-                       COUNT(DISTINCT ip.intern_id) as intern_count,
-                       GROUP_CONCAT(DISTINCT ip.fullname SEPARATOR ', ') as intern_names
-                FROM mentors m
-                JOIN users u ON m.user_id = u.user_id
-                LEFT JOIN roles r ON u.role_id = r.role_id
-                LEFT JOIN department d ON m.department_id = d.department_id
-                LEFT JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
-                LEFT JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                WHERE u.status = 'ACTIVE'
-                """);
+                    SELECT m.mentor_id, m.fullname, u.email,
+                           r.name as role_name,
+                           d.name_department,
+                           COUNT(DISTINCT ip.intern_id) as intern_count,
+                           GROUP_CONCAT(DISTINCT ip.fullname SEPARATOR ', ') as intern_names
+                    FROM mentors m
+                    JOIN users u ON m.user_id = u.user_id
+                    LEFT JOIN roles r ON u.role_id = r.role_id
+                    LEFT JOIN department d ON m.department_id = d.department_id
+                    LEFT JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
+                    LEFT JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    WHERE u.status = 'ACTIVE'
+                    """);
 
             List<Object> params = new ArrayList<>();
 
@@ -73,18 +73,18 @@ public class MentorService {
     public Map<String, Object> getMentorByIntern(Long internId) {
         try {
             String sql = """
-            SELECT prog.mentor_id, m.fullname, u.email,
-                   ip.available_from as start_date,
-                   d.name_department as department_name,
-                   d.department_id
-            FROM intern_profiles ip
-            JOIN intern_programs prog ON ip.program_id = prog.program_id
-            JOIN mentors m ON prog.mentor_id = m.mentor_id
-            JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN department d ON m.department_id = d.department_id
-            WHERE ip.intern_id = ?
-            LIMIT 1
-            """;
+                    SELECT prog.mentor_id, m.fullname, u.email,
+                           ip.available_from as start_date,
+                           d.name_department as department_name,
+                           d.department_id
+                    FROM intern_profiles ip
+                    JOIN intern_programs prog ON ip.program_id = prog.program_id
+                    JOIN mentors m ON prog.mentor_id = m.mentor_id
+                    JOIN users u ON m.user_id = u.user_id
+                    LEFT JOIN department d ON m.department_id = d.department_id
+                    WHERE ip.intern_id = ?
+                    LIMIT 1
+                    """;
 
             List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, internId);
 
@@ -192,13 +192,13 @@ public class MentorService {
     public Map<String, Object> checkMentorAssignment(Long internId) {
         try {
             String sql = """
-                SELECT prog.mentor_id, m.fullname as mentor_name
-                FROM intern_profiles ip
-                JOIN intern_programs prog ON ip.program_id = prog.program_id
-                JOIN mentors m ON prog.mentor_id = m.mentor_id
-                WHERE ip.intern_id = ?
-                LIMIT 1
-                """;
+                    SELECT prog.mentor_id, m.fullname as mentor_name
+                    FROM intern_profiles ip
+                    JOIN intern_programs prog ON ip.program_id = prog.program_id
+                    JOIN mentors m ON prog.mentor_id = m.mentor_id
+                    WHERE ip.intern_id = ?
+                    LIMIT 1
+                    """;
 
             List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, internId);
 
@@ -216,15 +216,15 @@ public class MentorService {
     public Map<String, Object> getUnassignedInterns() {
         try {
             String sql = """
-                SELECT i.intern_id, i.fullname, i.phone, i.email,
-                       u.name_uni as university_name,
-                       p.title as program_title
-                FROM intern_profiles i
-                LEFT JOIN universities u ON i.uni_id = u.uni_id
-                LEFT JOIN intern_programs p ON i.program_id = p.program_id
-                WHERE p.mentor_id IS NULL OR p.program_id IS NULL
-                ORDER BY i.fullname ASC
-                """;
+                    SELECT i.intern_id, i.fullname, i.phone, i.email,
+                           u.name_uni as university_name,
+                           p.title as program_title
+                    FROM intern_profiles i
+                    LEFT JOIN universities u ON i.uni_id = u.uni_id
+                    LEFT JOIN intern_programs p ON i.program_id = p.program_id
+                    WHERE p.mentor_id IS NULL OR p.program_id IS NULL
+                    ORDER BY i.fullname ASC
+                    """;
 
             List<Map<String, Object>> interns = jdbcTemplate.queryForList(sql);
 
@@ -238,25 +238,25 @@ public class MentorService {
     public Map<String, Object> getAllAssignments(Long mentorId) {
         try {
             StringBuilder sql = new StringBuilder("""
-            SELECT 
-                prog.mentor_id, 
-                ip.intern_id, 
-                ip.available_from as start_date,
-                m.fullname as mentor_name, 
-                u.email as mentor_email,
-                ip.fullname as intern_name, 
-                ip.phone as intern_phone,
-                ip.email as intern_email,
-                uni.name_uni as university_name,
-                prog.program_id,
-                prog.title as program_title
-            FROM intern_programs prog
-            JOIN intern_profiles ip ON prog.program_id = ip.program_id
-            LEFT JOIN mentors m ON prog.mentor_id = m.mentor_id
-            LEFT JOIN users u ON m.user_id = u.user_id
-            LEFT JOIN universities uni ON ip.uni_id = uni.uni_id
-            WHERE prog.mentor_id IS NOT NULL
-            """);
+                    SELECT 
+                        prog.mentor_id, 
+                        ip.intern_id, 
+                        ip.available_from as start_date,
+                        m.fullname as mentor_name, 
+                        u.email as mentor_email,
+                        ip.fullname as intern_name, 
+                        ip.phone as intern_phone,
+                        ip.email as intern_email,
+                        uni.name_uni as university_name,
+                        prog.program_id,
+                        prog.title as program_title
+                    FROM intern_programs prog
+                    JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    LEFT JOIN mentors m ON prog.mentor_id = m.mentor_id
+                    LEFT JOIN users u ON m.user_id = u.user_id
+                    LEFT JOIN universities uni ON ip.uni_id = uni.uni_id
+                    WHERE prog.mentor_id IS NOT NULL
+                    """);
 
             List<Object> params = new ArrayList<>();
 
@@ -325,24 +325,24 @@ public class MentorService {
             int totalInterns = jdbcTemplate.queryForObject(internCountSql, Integer.class);
 
             String assignedSql = """
-                SELECT COUNT(DISTINCT ip.intern_id) 
-                FROM intern_profiles ip
-                JOIN intern_programs prog ON ip.program_id = prog.program_id
-                WHERE prog.mentor_id IS NOT NULL
-                """;
+                    SELECT COUNT(DISTINCT ip.intern_id) 
+                    FROM intern_profiles ip
+                    JOIN intern_programs prog ON ip.program_id = prog.program_id
+                    WHERE prog.mentor_id IS NOT NULL
+                    """;
             int assignedInterns = jdbcTemplate.queryForObject(assignedSql, Integer.class);
 
             int unassignedInterns = totalInterns - assignedInterns;
 
             String topMentorSql = """
-                SELECT m.fullname, COUNT(DISTINCT ip.intern_id) as intern_count
-                FROM mentors m
-                JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
-                JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                GROUP BY m.mentor_id, m.fullname
-                ORDER BY intern_count DESC
-                LIMIT 5
-                """;
+                    SELECT m.fullname, COUNT(DISTINCT ip.intern_id) as intern_count
+                    FROM mentors m
+                    JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
+                    JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    GROUP BY m.mentor_id, m.fullname
+                    ORDER BY intern_count DESC
+                    LIMIT 5
+                    """;
             List<Map<String, Object>> topMentors = jdbcTemplate.queryForList(topMentorSql);
 
             return Map.of(
@@ -369,24 +369,24 @@ public class MentorService {
     public Map<String, Object> getInternsByMentor(Long mentorId) {
         try {
             String sql = """
-                SELECT 
-                    ip.intern_id,
-                    ip.fullname as intern_name,
-                    ip.email as intern_email,
-                    ip.phone,
-                    ip.year_of_study,
-                    u.name_uni as university,
-                    prog.title as program_title,
-                    ip.available_from as assigned_date,
-                    d.name_department as department
-                FROM intern_programs prog
-                JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                LEFT JOIN universities u ON ip.uni_id = u.uni_id
-                LEFT JOIN mentors m ON prog.mentor_id = m.mentor_id
-                LEFT JOIN department d ON m.department_id = d.department_id
-                WHERE prog.mentor_id = ?
-                ORDER BY ip.available_from DESC
-                """;
+                    SELECT 
+                        ip.intern_id,
+                        ip.fullname as intern_name,
+                        ip.email as intern_email,
+                        ip.phone,
+                        ip.year_of_study,
+                        u.name_uni as university,
+                        prog.title as program_title,
+                        ip.available_from as assigned_date,
+                        d.name_department as department
+                    FROM intern_programs prog
+                    JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    LEFT JOIN universities u ON ip.uni_id = u.uni_id
+                    LEFT JOIN mentors m ON prog.mentor_id = m.mentor_id
+                    LEFT JOIN department d ON m.department_id = d.department_id
+                    WHERE prog.mentor_id = ?
+                    ORDER BY ip.available_from DESC
+                    """;
 
             List<Map<String, Object>> interns = jdbcTemplate.queryForList(sql, mentorId);
 
@@ -405,45 +405,45 @@ public class MentorService {
         try {
             // Tổng số intern đang quản lý
             String totalSql = """
-                SELECT COUNT(DISTINCT ip.intern_id) 
-                FROM intern_programs prog
-                JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                WHERE prog.mentor_id = ?
-                """;
+                    SELECT COUNT(DISTINCT ip.intern_id) 
+                    FROM intern_programs prog
+                    JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    WHERE prog.mentor_id = ?
+                    """;
             int totalInterns = jdbcTemplate.queryForObject(totalSql, Integer.class, mentorId);
 
             // Phân bố theo trường
             String universitySql = """
-                SELECT u.name_uni, COUNT(DISTINCT ip.intern_id) as count
-                FROM intern_programs prog
-                JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                JOIN universities u ON ip.uni_id = u.uni_id
-                WHERE prog.mentor_id = ?
-                GROUP BY u.name_uni
-                ORDER BY count DESC
-                """;
+                    SELECT u.name_uni, COUNT(DISTINCT ip.intern_id) as count
+                    FROM intern_programs prog
+                    JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    JOIN universities u ON ip.uni_id = u.uni_id
+                    WHERE prog.mentor_id = ?
+                    GROUP BY u.name_uni
+                    ORDER BY count DESC
+                    """;
             List<Map<String, Object>> byUniversity = jdbcTemplate.queryForList(universitySql, mentorId);
 
             // Phân bố theo chương trình
             String programSql = """
-                SELECT prog.title, COUNT(DISTINCT ip.intern_id) as count
-                FROM intern_programs prog
-                JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                WHERE prog.mentor_id = ?
-                GROUP BY prog.title
-                ORDER BY count DESC
-                """;
+                    SELECT prog.title, COUNT(DISTINCT ip.intern_id) as count
+                    FROM intern_programs prog
+                    JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    WHERE prog.mentor_id = ?
+                    GROUP BY prog.title
+                    ORDER BY count DESC
+                    """;
             List<Map<String, Object>> byProgram = jdbcTemplate.queryForList(programSql, mentorId);
 
             // Intern mới nhất
             String recentSql = """
-                SELECT ip.fullname, ip.available_from as start_date
-                FROM intern_programs prog
-                JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                WHERE prog.mentor_id = ?
-                ORDER BY ip.available_from DESC
-                LIMIT 5
-                """;
+                    SELECT ip.fullname, ip.available_from as start_date
+                    FROM intern_programs prog
+                    JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    WHERE prog.mentor_id = ?
+                    ORDER BY ip.available_from DESC
+                    LIMIT 5
+                    """;
             List<Map<String, Object>> recentInterns = jdbcTemplate.queryForList(recentSql, mentorId);
 
             return Map.of(
@@ -474,33 +474,33 @@ public class MentorService {
             }
 
             String sql = """
-                SELECT 
-                    ip.intern_id,
-                    ip.fullname as intern_name,
-                    ip.email as intern_email,
-                    ip.phone,
-                    ip.dob,
-                    ip.year_of_study,
-                    ip.status as intern_status,
-                    u.name_uni as university,
-                    prog.title as program_title,
-                    ip.available_from as assigned_date,
-                    d.name_department as department,
+                    SELECT 
+                        ip.intern_id,
+                        ip.fullname as intern_name,
+                        ip.email as intern_email,
+                        ip.phone,
+                        ip.dob,
+                        ip.year_of_study,
+                        ip.status as intern_status,
+                        u.name_uni as university,
+                        prog.title as program_title,
+                        ip.available_from as assigned_date,
+                        d.name_department as department,
                     
-                    -- Số CV đã nộp
-                    (SELECT COUNT(*) FROM cv WHERE intern_id = ip.intern_id) as cv_count,
+                        -- Số CV đã nộp
+                        (SELECT COUNT(*) FROM cv WHERE intern_id = ip.intern_id) as cv_count,
                     
-                    -- Số document đã nộp
-                    (SELECT COUNT(*) FROM intern_documents WHERE intern_id = ip.intern_id) as document_count
+                        -- Số document đã nộp
+                        (SELECT COUNT(*) FROM intern_documents WHERE intern_id = ip.intern_id) as document_count
                     
-                FROM intern_programs prog
-                JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                LEFT JOIN universities u ON ip.uni_id = u.uni_id
-                LEFT JOIN mentors m ON prog.mentor_id = m.mentor_id
-                LEFT JOIN department d ON m.department_id = d.department_id
-                WHERE prog.mentor_id = ?
-                ORDER BY ip.available_from DESC
-                """;
+                    FROM intern_programs prog
+                    JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    LEFT JOIN universities u ON ip.uni_id = u.uni_id
+                    LEFT JOIN mentors m ON prog.mentor_id = m.mentor_id
+                    LEFT JOIN department d ON m.department_id = d.department_id
+                    WHERE prog.mentor_id = ?
+                    ORDER BY ip.available_from DESC
+                    """;
 
             List<Map<String, Object>> interns = jdbcTemplate.queryForList(sql, mentorId);
 
@@ -523,34 +523,34 @@ public class MentorService {
     public Map<String, Object> getMentorOverview() {
         try {
             String sql = """
-                SELECT 
-                    m.mentor_id,
-                    m.fullname as mentor_name,
-                    u.email as mentor_email,
-                    r.name as role_name,
-                    COUNT(DISTINCT ip.intern_id) as intern_count,
+                    SELECT 
+                        m.mentor_id,
+                        m.fullname as mentor_name,
+                        u.email as mentor_email,
+                        r.name as role_name,
+                        COUNT(DISTINCT ip.intern_id) as intern_count,
                     
-                    -- Số intern theo trạng thái
-                    COUNT(DISTINCT CASE WHEN ip.status = 'ACTIVE' THEN ip.intern_id END) as active_interns,
-                    COUNT(DISTINCT CASE WHEN ip.status = 'PENDING' THEN ip.intern_id END) as pending_interns,
-                    COUNT(DISTINCT CASE WHEN ip.status = 'COMPLETED' THEN ip.intern_id END) as completed_interns,
+                        -- Số intern theo trạng thái
+                        COUNT(DISTINCT CASE WHEN ip.status = 'ACTIVE' THEN ip.intern_id END) as active_interns,
+                        COUNT(DISTINCT CASE WHEN ip.status = 'PENDING' THEN ip.intern_id END) as pending_interns,
+                        COUNT(DISTINCT CASE WHEN ip.status = 'COMPLETED' THEN ip.intern_id END) as completed_interns,
                     
-                    -- Ngày phân công gần nhất
-                    MAX(ip.available_from) as latest_assignment,
+                        -- Ngày phân công gần nhất
+                        MAX(ip.available_from) as latest_assignment,
                     
-                    -- Department
-                    d.name_department as department
+                        -- Department
+                        d.name_department as department
                     
-                FROM mentors m
-                JOIN users u ON m.user_id = u.user_id
-                JOIN roles r ON u.role_id = r.role_id
-                LEFT JOIN department d ON m.department_id = d.department_id
-                LEFT JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
-                LEFT JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                WHERE u.status = 'ACTIVE'
-                GROUP BY m.mentor_id, m.fullname, u.email, r.name, d.name_department
-                ORDER BY intern_count DESC, m.fullname ASC
-                """;
+                    FROM mentors m
+                    JOIN users u ON m.user_id = u.user_id
+                    JOIN roles r ON u.role_id = r.role_id
+                    LEFT JOIN department d ON m.department_id = d.department_id
+                    LEFT JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
+                    LEFT JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    WHERE u.status = 'ACTIVE'
+                    GROUP BY m.mentor_id, m.fullname, u.email, r.name, d.name_department
+                    ORDER BY intern_count DESC, m.fullname ASC
+                    """;
 
             List<Map<String, Object>> mentors = jdbcTemplate.queryForList(sql);
 
@@ -581,71 +581,71 @@ public class MentorService {
         try {
             // Mentor có nhiều intern nhất
             String topSql = """
-                SELECT 
-                    m.mentor_id as user_id,
-                    m.fullname,
-                    u.email,
-                    COUNT(DISTINCT ip.intern_id) as intern_count
-                FROM mentors m
-                JOIN users u ON m.user_id = u.user_id
-                LEFT JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
-                LEFT JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                WHERE u.status = 'ACTIVE'
-                GROUP BY m.mentor_id, m.fullname, u.email
-                HAVING intern_count > 0
-                ORDER BY intern_count DESC
-                LIMIT 10
-                """;
-            List<Map<String, Object>> topMentors = jdbcTemplate.queryForList(topSql);
-
-            // Mentor chưa có intern hoặc có ít intern nhất
-            String availableSql = """
-                SELECT 
-                    m.mentor_id as user_id,
-                    m.fullname,
-                    u.email,
-                    COUNT(DISTINCT ip.intern_id) as intern_count
-                FROM mentors m
-                JOIN users u ON m.user_id = u.user_id
-                LEFT JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
-                LEFT JOIN intern_profiles ip ON prog.program_id = ip.program_id
-                WHERE u.status = 'ACTIVE'
-                GROUP BY m.mentor_id, m.fullname, u.email
-                ORDER BY intern_count ASC
-                LIMIT 10
-                """;
-            List<Map<String, Object>> availableMentors = jdbcTemplate.queryForList(availableSql);
-
-            // Phân bố theo khoảng
-            String distributionSql = """
-                SELECT 
-                    CASE 
-                        WHEN intern_count = 0 THEN '0 intern'
-                        WHEN intern_count BETWEEN 1 AND 3 THEN '1-3 interns'
-                        WHEN intern_count BETWEEN 4 AND 6 THEN '4-6 interns'
-                        WHEN intern_count BETWEEN 7 AND 10 THEN '7-10 interns'
-                        ELSE '10+ interns'
-                    END as workload_range,
-                    COUNT(*) as mentor_count
-                FROM (
-                    SELECT m.mentor_id, COUNT(DISTINCT ip.intern_id) as intern_count
+                    SELECT 
+                        m.mentor_id as user_id,
+                        m.fullname,
+                        u.email,
+                        COUNT(DISTINCT ip.intern_id) as intern_count
                     FROM mentors m
                     JOIN users u ON m.user_id = u.user_id
                     LEFT JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
                     LEFT JOIN intern_profiles ip ON prog.program_id = ip.program_id
                     WHERE u.status = 'ACTIVE'
-                    GROUP BY m.mentor_id
-                ) workload
-                GROUP BY workload_range
-                ORDER BY 
-                    CASE workload_range
-                        WHEN '0 intern' THEN 1
-                        WHEN '1-3 interns' THEN 2
-                        WHEN '4-6 interns' THEN 3
-                        WHEN '7-10 interns' THEN 4
-                        ELSE 5
-                    END
-                """;
+                    GROUP BY m.mentor_id, m.fullname, u.email
+                    HAVING intern_count > 0
+                    ORDER BY intern_count DESC
+                    LIMIT 10
+                    """;
+            List<Map<String, Object>> topMentors = jdbcTemplate.queryForList(topSql);
+
+            // Mentor chưa có intern hoặc có ít intern nhất
+            String availableSql = """
+                    SELECT 
+                        m.mentor_id as user_id,
+                        m.fullname,
+                        u.email,
+                        COUNT(DISTINCT ip.intern_id) as intern_count
+                    FROM mentors m
+                    JOIN users u ON m.user_id = u.user_id
+                    LEFT JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
+                    LEFT JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                    WHERE u.status = 'ACTIVE'
+                    GROUP BY m.mentor_id, m.fullname, u.email
+                    ORDER BY intern_count ASC
+                    LIMIT 10
+                    """;
+            List<Map<String, Object>> availableMentors = jdbcTemplate.queryForList(availableSql);
+
+            // Phân bố theo khoảng
+            String distributionSql = """
+                    SELECT 
+                        CASE 
+                            WHEN intern_count = 0 THEN '0 intern'
+                            WHEN intern_count BETWEEN 1 AND 3 THEN '1-3 interns'
+                            WHEN intern_count BETWEEN 4 AND 6 THEN '4-6 interns'
+                            WHEN intern_count BETWEEN 7 AND 10 THEN '7-10 interns'
+                            ELSE '10+ interns'
+                        END as workload_range,
+                        COUNT(*) as mentor_count
+                    FROM (
+                        SELECT m.mentor_id, COUNT(DISTINCT ip.intern_id) as intern_count
+                        FROM mentors m
+                        JOIN users u ON m.user_id = u.user_id
+                        LEFT JOIN intern_programs prog ON m.mentor_id = prog.mentor_id
+                        LEFT JOIN intern_profiles ip ON prog.program_id = ip.program_id
+                        WHERE u.status = 'ACTIVE'
+                        GROUP BY m.mentor_id
+                    ) workload
+                    GROUP BY workload_range
+                    ORDER BY 
+                        CASE workload_range
+                            WHEN '0 intern' THEN 1
+                            WHEN '1-3 interns' THEN 2
+                            WHEN '4-6 interns' THEN 3
+                            WHEN '7-10 interns' THEN 4
+                            ELSE 5
+                        END
+                    """;
             List<Map<String, Object>> distribution = jdbcTemplate.queryForList(distributionSql);
 
             return Map.of(

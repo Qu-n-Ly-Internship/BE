@@ -45,7 +45,6 @@ public class DepartmentService {
     }
 
 
-
     public List<DepartmentRequest> getByProgram(Long programId) {
         List<Department> departments = departmentRepository.findByProgramId(programId);
 
@@ -166,7 +165,6 @@ public class DepartmentService {
                 department.getNameDepartment()
         );
     }
-
 
 
     // ✅ Cập nhật mentor sang department khác (trả DTO thay vì entity)

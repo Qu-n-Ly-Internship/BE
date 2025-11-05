@@ -2,6 +2,7 @@ package com.example.be.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+
 import java.util.List;
 
 @Entity
@@ -26,15 +27,35 @@ public class Hr {
     private List<Program> programs;
 
     // --- Getters & Setters ---
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getFullname() { return fullname; }
-    public void setFullname(String fullname) { this.fullname = fullname; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+    public String getFullname() {
+        return fullname;
+    }
 
-    public List<Program> getPrograms() { return programs; }
-    public void setPrograms(List<Program> programs) { this.programs = programs; }
+    public void setFullname(String fullname) {
+        this.fullname = fullname;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public List<Program> getPrograms() {
+        return programs;
+    }
+
+    public void setPrograms(List<Program> programs) {
+        this.programs = programs;
+    }
 }

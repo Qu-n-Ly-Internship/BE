@@ -21,37 +21,37 @@ import java.nio.charset.StandardCharsets;
 @Component
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
-        private static final Logger logger = LoggerFactory.getLogger(OAuth2LoginSuccessHandler.class);
-        private final JwtService jwtService;
-        private final AuthService authService;
+    private static final Logger logger = LoggerFactory.getLogger(OAuth2LoginSuccessHandler.class);
+    private final JwtService jwtService;
+    private final AuthService authService;
 
-        @Override
-        public void onAuthenticationSuccess(HttpServletRequest request,
-                        HttpServletResponse response,
-                        Authentication authentication) throws IOException {
-                try {
-                        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-                        logger.debug("OAuth2 attributes: {}", oAuth2User.getAttributes());
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        Authentication authentication) throws IOException {
+        try {
+            OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+            logger.debug("OAuth2 attributes: {}", oAuth2User.getAttributes());
 
-                        User user = authService.processOAuthPostLogin(oAuth2User);
-                        logger.debug("Processed user: {}", user);
+            User user = authService.processOAuthPostLogin(oAuth2User);
+            logger.debug("Processed user: {}", user);
 
-                        String token = jwtService.generateToken(user.getEmail());
-                        logger.debug("Generated token: {}", token);
+            String token = jwtService.generateToken(user.getEmail());
+            logger.debug("Generated token: {}", token);
 
-                        String redirectUrl = "http://localhost:5173/oauth2/callback?token="
-                                        + URLEncoder.encode(token, StandardCharsets.UTF_8);
-                        logger.debug("Redirecting to: {}", redirectUrl);
+            String redirectUrl = "http://localhost:5173/oauth2/callback?token="
+                    + URLEncoder.encode(token, StandardCharsets.UTF_8);
+            logger.debug("Redirecting to: {}", redirectUrl);
 
-                        if (response.isCommitted()) {
-                                logger.error("Response already committed, cannot redirect");
-                                response.sendError(500, "Cannot redirect: Response already committed");
-                                return;
-                        }
-                        response.sendRedirect(redirectUrl);
-                } catch (Exception e) {
-                    logger.error("OAuth2 success handler error", e);
-                    response.sendError(500, "OAuth2 login failed: " + e.getMessage());
-                }
+            if (response.isCommitted()) {
+                logger.error("Response already committed, cannot redirect");
+                response.sendError(500, "Cannot redirect: Response already committed");
+                return;
+            }
+            response.sendRedirect(redirectUrl);
+        } catch (Exception e) {
+            logger.error("OAuth2 success handler error", e);
+            response.sendError(500, "OAuth2 login failed: " + e.getMessage());
         }
+    }
 }

@@ -18,24 +18,24 @@ import java.util.Map;
 public class InternProfileService {
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
-    
+
     // Giới hạn số người trong mỗi nhóm
     private static final int MAX_GROUP_SIZE = 8;
 
     public Map<String, Object> getAllProfiles(String query, String school, String major, String status, int page, int size) {
         try {
             StringBuilder sql = new StringBuilder("""
-                SELECT ip.intern_id as intern_id, ip.fullname as student, ip.email as studentEmail,
-                       u.name_uni as school, ip.major_id, ip.year_of_study,
-                       ip.phone, ip.available_from as startDate, ip.end_date as endDate,
-                       p.title, ip.status, ip.program_id,
-                       mentor.fullname as mentor_name, p.mentor_id
-                FROM intern_profiles ip
-                LEFT JOIN universities u ON ip.uni_id = u.uni_id
-                LEFT JOIN intern_programs p ON ip.program_id = p.program_id
-                LEFT JOIN users mentor ON p.mentor_id = mentor.user_id
-                WHERE 1=1
-                """);
+                    SELECT ip.intern_id as intern_id, ip.fullname as student, ip.email as studentEmail,
+                           u.name_uni as school, ip.major_id, ip.year_of_study,
+                           ip.phone, ip.available_from as startDate, ip.end_date as endDate,
+                           p.title, ip.status, ip.program_id,
+                           mentor.fullname as mentor_name, p.mentor_id
+                    FROM intern_profiles ip
+                    LEFT JOIN universities u ON ip.uni_id = u.uni_id
+                    LEFT JOIN intern_programs p ON ip.program_id = p.program_id
+                    LEFT JOIN users mentor ON p.mentor_id = mentor.user_id
+                    WHERE 1=1
+                    """);
 
             List<Object> params = new ArrayList<>();
 
@@ -95,15 +95,15 @@ public class InternProfileService {
 
             Integer uniId = getOrCreateUniversity((String) request.get("school"));
             Integer majorId = getMajorId((String) request.get("major"));
-            
+
             // ✅ SỬA: Tự động phân nhóm với giới hạn 8 người
             Integer programId = getOrCreateProgramWithLimit(request);
 
             String insertSql = """
-                INSERT INTO intern_profiles 
-                (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 0)
-                """;
+                    INSERT INTO intern_profiles 
+                    (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 0)
+                    """;
 
             jdbcTemplate.update(insertSql,
                     ((String) request.get("student")).trim(),
@@ -136,17 +136,17 @@ public class InternProfileService {
             Integer programId = updateOrCreateProgram(id, request);
 
             String updateSql = """
-                UPDATE intern_profiles 
-                SET fullname = ?, 
-                    email = ?, 
-                    uni_id = ?, 
-                    major_id = ?,
-                    program_id = ?,
-                    available_from = ?, 
-                    end_date = ?, 
-                    status = ?
-                WHERE intern_id = ?
-                """;
+                    UPDATE intern_profiles 
+                    SET fullname = ?, 
+                        email = ?, 
+                        uni_id = ?, 
+                        major_id = ?,
+                        program_id = ?,
+                        available_from = ?, 
+                        end_date = ?, 
+                        status = ?
+                    WHERE intern_id = ?
+                    """;
 
             jdbcTemplate.update(updateSql,
                     request.get("student"),
@@ -271,22 +271,22 @@ public class InternProfileService {
 
         // Tìm tất cả các program có cùng title
         String findProgramsSql = """
-            SELECT p.program_id, COUNT(ip.intern_id) as member_count
-            FROM intern_programs p
-            LEFT JOIN intern_profiles ip ON p.program_id = ip.program_id
-            WHERE p.title = ?
-            GROUP BY p.program_id
-            HAVING COUNT(ip.intern_id) < ?
-            ORDER BY p.program_id ASC
-            LIMIT 1
-            """;
-        
+                SELECT p.program_id, COUNT(ip.intern_id) as member_count
+                FROM intern_programs p
+                LEFT JOIN intern_profiles ip ON p.program_id = ip.program_id
+                WHERE p.title = ?
+                GROUP BY p.program_id
+                HAVING COUNT(ip.intern_id) < ?
+                ORDER BY p.program_id ASC
+                LIMIT 1
+                """;
+
         List<Map<String, Object>> availablePrograms = jdbcTemplate.queryForList(
-            findProgramsSql, 
-            title.trim(), 
-            MAX_GROUP_SIZE
+                findProgramsSql,
+                title.trim(),
+                MAX_GROUP_SIZE
         );
-        
+
         // Nếu có program chưa đầy -> dùng program đó
         if (!availablePrograms.isEmpty()) {
             return (Integer) availablePrograms.get(0).get("program_id");
@@ -336,10 +336,10 @@ public class InternProfileService {
 
     private int getTotalProfileCount(String query, String school, String major, String status) {
         StringBuilder countSql = new StringBuilder("""
-            SELECT COUNT(*) FROM intern_profiles ip
-            LEFT JOIN universities u ON ip.uni_id = u.uni_id
-            WHERE 1=1
-            """);
+                SELECT COUNT(*) FROM intern_profiles ip
+                LEFT JOIN universities u ON ip.uni_id = u.uni_id
+                WHERE 1=1
+                """);
 
         List<Object> params = new ArrayList<>();
 

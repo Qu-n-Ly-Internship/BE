@@ -4,6 +4,7 @@ import com.example.be.service.AllowanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.Map;
 import java.util.List;
 
@@ -198,6 +199,7 @@ public class AllowanceController {
             ));
         }
     }
+
     // 13. Lấy lịch sử phụ cấp của thực tập sinh hiện tại
     @PostMapping("/my-history")
     public ResponseEntity<?> getMyAllowanceHistory(@RequestBody Map<String, String> request) {

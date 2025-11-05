@@ -25,14 +25,14 @@ public class CVService {
     public Map<String, Object> getAllCVs(String status, String query) {
         try {
             StringBuilder sql = new StringBuilder("""
-                SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.storage_path, c.filename,
-                       i.intern_id, i.fullname as intern_name, i.phone,
-                       u.name_uni as university_name
-                FROM cv c
-                JOIN intern_profiles i ON c.intern_id = i.intern_id
-                LEFT JOIN universities u ON i.uni_id = u.uni_id
-                WHERE 1=1
-                """);
+                    SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.storage_path, c.filename,
+                           i.intern_id, i.fullname as intern_name, i.phone,
+                           u.name_uni as university_name
+                    FROM cv c
+                    JOIN intern_profiles i ON c.intern_id = i.intern_id
+                    LEFT JOIN universities u ON i.uni_id = u.uni_id
+                    WHERE 1=1
+                    """);
 
             List<Object> params = new ArrayList<>();
 
@@ -83,11 +83,11 @@ public class CVService {
             Long userId = ((Number) userResult.get(0).get("user_id")).longValue();
 
             String sql = """
-                 SELECT file_id as cv_id, filename, file_type, status, uploaded_by, upload_at as uploaded_at, storage_path, intern_id
-                FROM cv
-                 WHERE user_id = ?
-                ORDER BY file_id DESC
-                """;
+                     SELECT file_id as cv_id, filename, file_type, status, uploaded_by, upload_at as uploaded_at, storage_path, intern_id
+                    FROM cv
+                     WHERE user_id = ?
+                    ORDER BY file_id DESC
+                    """;
 
             List<Map<String, Object>> cvs = jdbcTemplate.queryForList(sql, userId);
 
@@ -108,13 +108,13 @@ public class CVService {
     public Map<String, Object> getPendingCVs() {
         try {
             String sql = """
-                SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.upload_at as uploaded_at, c.storage_path, c.filename,
-                        c.user_id, usr.fullname as intern_name, usr.email as intern_email
-                FROM cv c
-                 JOIN users usr ON c.user_id = usr.user_id
-                 WHERE c.status = 'PENDING' AND c.intern_id IS NULL
-                ORDER BY c.file_id DESC
-                """;
+                    SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.upload_at as uploaded_at, c.storage_path, c.filename,
+                            c.user_id, usr.fullname as intern_name, usr.email as intern_email
+                    FROM cv c
+                     JOIN users usr ON c.user_id = usr.user_id
+                     WHERE c.status = 'PENDING' AND c.intern_id IS NULL
+                    ORDER BY c.file_id DESC
+                    """;
 
             List<Map<String, Object>> cvs = jdbcTemplate.queryForList(sql);
 
@@ -135,16 +135,16 @@ public class CVService {
     public Map<String, Object> getCVById(Long id) {
         try {
             String sql = """
-                SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.storage_path, c.filename,
-                       i.intern_id, i.fullname as intern_name, i.phone, i.dob, i.year_of_study,
-    u.name_uni as university_name,
-                       p.title as program_title
-                FROM cv c
-                JOIN intern_profiles i ON c.intern_id = i.intern_id
-                LEFT JOIN universities u ON i.uni_id = u.uni_id
-                LEFT JOIN intern_programs p ON i.program_id = p.program_id
-                WHERE c.file_id = ?
-                """;
+                                SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.storage_path, c.filename,
+                                       i.intern_id, i.fullname as intern_name, i.phone, i.dob, i.year_of_study,
+                    u.name_uni as university_name,
+                                       p.title as program_title
+                                FROM cv c
+                                JOIN intern_profiles i ON c.intern_id = i.intern_id
+                                LEFT JOIN universities u ON i.uni_id = u.uni_id
+                                LEFT JOIN intern_programs p ON i.program_id = p.program_id
+                                WHERE c.file_id = ?
+                    """;
 
             List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, id);
 
@@ -162,15 +162,15 @@ public class CVService {
     public Map<String, Object> getCVsByIntern(Long internId) {
         try {
             String sql = """
-                SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.storage_path, c.filename,
-                       i.intern_id, i.fullname as intern_name, i.phone,
-                       u.name_uni as university_name
-                FROM cv c
-                JOIN intern_profiles i ON c.intern_id = i.intern_id
-                LEFT JOIN universities u ON i.uni_id = u.uni_id
-                WHERE c.intern_id = ?
-                ORDER BY c.file_id DESC
-                """;
+                    SELECT c.file_id as cv_id, c.file_type, c.status, c.uploaded_by, c.storage_path, c.filename,
+                           i.intern_id, i.fullname as intern_name, i.phone,
+                           u.name_uni as university_name
+                    FROM cv c
+                    JOIN intern_profiles i ON c.intern_id = i.intern_id
+                    LEFT JOIN universities u ON i.uni_id = u.uni_id
+                    WHERE c.intern_id = ?
+                    ORDER BY c.file_id DESC
+                    """;
 
             List<Map<String, Object>> cvs = jdbcTemplate.queryForList(sql, internId);
 
@@ -184,13 +184,13 @@ public class CVService {
     public Map<String, Object> getCVStats() {
         try {
             String sql = """
-                SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending,
-                    SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END) as approved,
-                    SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) as rejected
-                FROM cv
-                """;
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending,
+                        SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END) as approved,
+                        SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) as rejected
+                    FROM cv
+                    """;
 
             Map<String, Object> stats = jdbcTemplate.queryForMap(sql);
 
@@ -224,8 +224,8 @@ public class CVService {
         }
 
         var userResult = jdbcTemplate.queryForList(
-            "SELECT user_id, email FROM users WHERE email = ?",
-            email.trim()
+                "SELECT user_id, email FROM users WHERE email = ?",
+                email.trim()
         );
 
         if (userResult.isEmpty()) {
@@ -257,11 +257,11 @@ public class CVService {
 
     private Map<String, Object> checkCVStatus(Long id, String expectedStatus) {
         String checkSql = """
-             SELECT c.*, u.fullname as intern_name, u.email as intern_email
-             FROM cv c
-             JOIN users u ON c.user_id = u.user_id
-             WHERE c.file_id = ?
-             """;
+                SELECT c.*, u.fullname as intern_name, u.email as intern_email
+                FROM cv c
+                JOIN users u ON c.user_id = u.user_id
+                WHERE c.file_id = ?
+                """;
         List<Map<String, Object>> result = jdbcTemplate.queryForList(checkSql, id);
 
         if (result.isEmpty()) {
@@ -293,18 +293,18 @@ public class CVService {
             String fileUrl = json.get("secure_url").asText();
 
             String insertSql = """
-                INSERT INTO cv (intern_id, user_id, filename, file_type, status, storage_path, uploaded_by, upload_at)
-                VALUES (?, ?, ?, ?, 'PENDING', ?, ?, NOW())
-                """;
+                    INSERT INTO cv (intern_id, user_id, filename, file_type, status, storage_path, uploaded_by, upload_at)
+                    VALUES (?, ?, ?, ?, 'PENDING', ?, ?, NOW())
+                    """;
 
             jdbcTemplate.update(
-                insertSql,
-                finalInternId,
-                userId,
-                fileName,
-                fileType,
-                fileUrl,
-                userId
+                    insertSql,
+                    finalInternId,
+                    userId,
+                    fileName,
+                    fileType,
+                    fileUrl,
+                    userId
             );
 
             return Map.of(

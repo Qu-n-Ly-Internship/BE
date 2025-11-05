@@ -40,7 +40,6 @@ public class InternDocument {
     private LocalDateTime reviewedAt;
 
 
-
     // =======================
     // QUAN HỆ VỚI CÁC ENTITY KHÁC
     // =======================

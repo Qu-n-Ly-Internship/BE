@@ -118,7 +118,7 @@ public class AdminService {
     }
 
     public Map<String, Object> getUsers(String query, String role, String status,
-            boolean excludeInternProfiles, int page, int size) {
+                                        boolean excludeInternProfiles, int page, int size) {
         try {
             List<Object> params = new ArrayList<>();
             List<Object> countParams = new ArrayList<>();

@@ -1,6 +1,7 @@
 package com.example.be.dto;
 
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Getter
@@ -9,32 +10,34 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class SupportRequestResponse {
-    
+
     private Long id;
-    
+
     private Integer internId;
 
     private Integer userId;
     private String internName;
     private String internEmail;
     
+    private Integer userID;
+
     private Long hrId;
-    
+
     private String subject;
-    
+
     private String message;
-    
+
     private String attachmentFileId;
-    
+
     private String status;
-    
+
     private String priority;
-    
+
     private LocalDateTime createdAt;
-    
+
     private LocalDateTime respondedAt;
-    
+
     private LocalDateTime resolvedAt;
-    
+
     private String hrResponse;
 }

@@ -26,14 +26,14 @@ public class DocumentController {
     ) {
         try {
             String sql = """
-                SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail,
-                       i.intern_id, i.fullname as intern_name, i.phone,
-                       u.name_uni as university_name
-                FROM intern_documents d
-                LEFT JOIN intern_profiles i ON d.intern_id = i.intern_id
-                LEFT JOIN universities u ON i.uni_id = u.uni_id
-                WHERE 1=1
-                """;
+                    SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail,
+                           i.intern_id, i.fullname as intern_name, i.phone,
+                           u.name_uni as university_name
+                    FROM intern_documents d
+                    LEFT JOIN intern_profiles i ON d.intern_id = i.intern_id
+                    LEFT JOIN universities u ON i.uni_id = u.uni_id
+                    WHERE 1=1
+                    """;
 
             if (status != null && !status.trim().isEmpty()) {
                 sql += " AND d.status = '" + status + "'";
@@ -89,11 +89,11 @@ public class DocumentController {
 
             // Lấy TẤT CẢ documents của intern (bao gồm HR upload)
             String sql = """
-            SELECT d.document_id, d.document_name, d.document_type, d.status, d.uploaded_at, d.file_detail, d.rejection_reason
-            FROM intern_documents d
-            WHERE d.intern_id = ?
-            ORDER BY d.uploaded_at DESC
-            """;
+                    SELECT d.document_id, d.document_name, d.document_type, d.status, d.uploaded_at, d.file_detail, d.rejection_reason
+                    FROM intern_documents d
+                    WHERE d.intern_id = ?
+                    ORDER BY d.uploaded_at DESC
+                    """;
 
             List<Map<String, Object>> documents = jdbcTemplate.queryForList(sql, internId);
 
@@ -115,15 +115,15 @@ public class DocumentController {
     public ResponseEntity<?> getPendingDocuments() {
         try {
             String sql = """
-                SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail,
-                       i.intern_id, i.fullname as intern_name, i.phone,
-                       u.name_uni as university_name
-                FROM intern_documents d
-                LEFT JOIN intern_profiles i ON d.intern_id = i.intern_id
-                LEFT JOIN universities u ON i.uni_id = u.uni_id
-                WHERE d.status = 'PENDING'
-                ORDER BY d.uploaded_at ASC
-                """;
+                    SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail,
+                           i.intern_id, i.fullname as intern_name, i.phone,
+                           u.name_uni as university_name
+                    FROM intern_documents d
+                    LEFT JOIN intern_profiles i ON d.intern_id = i.intern_id
+                    LEFT JOIN universities u ON i.uni_id = u.uni_id
+                    WHERE d.status = 'PENDING'
+                    ORDER BY d.uploaded_at ASC
+                    """;
 
             List<Map<String, Object>> documents = jdbcTemplate.queryForList(sql);
 
@@ -146,16 +146,16 @@ public class DocumentController {
     public ResponseEntity<?> getDocumentById(@PathVariable Long id) {
         try {
             String sql = """
-                SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail,
-                       i.intern_id, i.fullname as intern_name, i.phone, i.dob, i.year_of_study,
-                       u.name_uni as university_name,
-                       p.title as program_title
-                FROM intern_documents d
-                JOIN intern_profiles i ON d.intern_id = i.intern_id
-                LEFT JOIN universities u ON i.uni_id = u.uni_id
-                LEFT JOIN intern_programs p ON i.program_id = p.program_id
-                WHERE d.document_id = ?
-                """;
+                    SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail,
+                           i.intern_id, i.fullname as intern_name, i.phone, i.dob, i.year_of_study,
+                           u.name_uni as university_name,
+                           p.title as program_title
+                    FROM intern_documents d
+                    JOIN intern_profiles i ON d.intern_id = i.intern_id
+                    LEFT JOIN universities u ON i.uni_id = u.uni_id
+                    LEFT JOIN intern_programs p ON i.program_id = p.program_id
+                    WHERE d.document_id = ?
+                    """;
 
             List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, id);
 
@@ -184,15 +184,15 @@ public class DocumentController {
     public ResponseEntity<?> getDocumentsByIntern(@PathVariable Long internId) {
         try {
             String sql = """
-                SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail,
-                       i.intern_id, i.fullname as intern_name, i.phone,
-                       u.name_uni as university_name
-                FROM intern_documents d
-                JOIN intern_profiles i ON d.intern_id = i.intern_id
-                LEFT JOIN universities u ON i.uni_id = u.uni_id
-                WHERE i.intern_id = ?
-                ORDER BY d.uploaded_at DESC
-                """;
+                    SELECT d.document_id, d.document_type, d.status, d.uploaded_at, d.file_detail,
+                           i.intern_id, i.fullname as intern_name, i.phone,
+                           u.name_uni as university_name
+                    FROM intern_documents d
+                    JOIN intern_profiles i ON d.intern_id = i.intern_id
+                    LEFT JOIN universities u ON i.uni_id = u.uni_id
+                    WHERE i.intern_id = ?
+                    ORDER BY d.uploaded_at DESC
+                    """;
 
             List<Map<String, Object>> documents = jdbcTemplate.queryForList(sql, internId);
 
@@ -215,13 +215,13 @@ public class DocumentController {
     public ResponseEntity<?> getDocumentStats() {
         try {
             String sql = """
-                SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending,
-                    SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END) as approved,
-                    SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) as rejected
-                FROM intern_documents
-                """;
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending,
+                        SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END) as approved,
+                        SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) as rejected
+                    FROM intern_documents
+                    """;
 
             Map<String, Object> stats = jdbcTemplate.queryForMap(sql);
 
@@ -301,10 +301,10 @@ public class DocumentController {
                     // Chưa có intern_profile, tạo mới với các giá trị mặc định
                     System.out.println("📝 Creating new intern_profile for: " + user.getEmail());
                     String insertInternSql = """
-                        INSERT INTO intern_profiles 
-                        (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
-                        VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
-                        """;
+                            INSERT INTO intern_profiles 
+                            (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
+                            VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, 'PENDING', '', 0)
+                            """;
                     jdbcTemplate.update(insertInternSql, user.getFullName(), user.getEmail());
                     // Lấy ID vừa tạo
                     finalInternId = jdbcTemplate.queryForObject(
@@ -331,9 +331,9 @@ public class DocumentController {
 
             // Insert vào database
             String insertSql = """
-                INSERT INTO intern_documents (intern_id, document_name, document_type, uploaded_at, status, file_detail)
-                VALUES (?, ?, ?, NOW(), 'PENDING', ?)
-                """;
+                    INSERT INTO intern_documents (intern_id, document_name, document_type, uploaded_at, status, file_detail)
+                    VALUES (?, ?, ?, NOW(), 'PENDING', ?)
+                    """;
 
             jdbcTemplate.update(insertSql, finalInternId, fileName, documentType, fileDetail);
 
@@ -373,11 +373,11 @@ public class DocumentController {
 
             // Update status to APPROVED
             String updateSql = """
-                UPDATE intern_documents 
-                SET status = 'APPROVED',
-                    reviewed_at = NOW()
-                WHERE document_id = ?
-                """;
+                    UPDATE intern_documents 
+                    SET status = 'APPROVED',
+                        reviewed_at = NOW()
+                    WHERE document_id = ?
+                    """;
 
             jdbcTemplate.update(updateSql, id);
 
@@ -422,12 +422,12 @@ public class DocumentController {
 
             // Update status to REJECTED với lý do
             String updateSql = """
-                UPDATE intern_documents 
-                SET status = 'REJECTED',
-                    rejection_reason = ?,
-                    reviewed_at = NOW()
-                WHERE document_id = ?
-                """;
+                    UPDATE intern_documents 
+                    SET status = 'REJECTED',
+                        rejection_reason = ?,
+                        reviewed_at = NOW()
+                    WHERE document_id = ?
+                    """;
 
             jdbcTemplate.update(updateSql, rejectionReason.trim(), id);
 
@@ -475,12 +475,12 @@ public class DocumentController {
             if (action.equals("APPROVE")) {
                 // Lưu ghi chú duyệt (nếu có) vào cột rejection_reason như review_note
                 String updateSql = """
-                    UPDATE intern_documents 
-                    SET status = 'APPROVED',
-                        rejection_reason = COALESCE(?, rejection_reason),
-                        reviewed_at = NOW()
-                    WHERE document_id = ?
-                    """;
+                        UPDATE intern_documents 
+                        SET status = 'APPROVED',
+                            rejection_reason = COALESCE(?, rejection_reason),
+                            reviewed_at = NOW()
+                        WHERE document_id = ?
+                        """;
                 jdbcTemplate.update(updateSql, note != null && !note.trim().isEmpty() ? note.trim() : null, id);
 
                 return ResponseEntity.ok(Map.of(
@@ -498,12 +498,12 @@ public class DocumentController {
                 }
 
                 String updateSql = """
-                    UPDATE intern_documents 
-                    SET status = 'REJECTED',
-                        rejection_reason = ?,
-                        reviewed_at = NOW()
-                    WHERE document_id = ?
-                    """;
+                        UPDATE intern_documents 
+                        SET status = 'REJECTED',
+                            rejection_reason = ?,
+                            reviewed_at = NOW()
+                        WHERE document_id = ?
+                        """;
                 jdbcTemplate.update(updateSql, note.trim(), id);
 
                 return ResponseEntity.ok(Map.of(
@@ -558,9 +558,9 @@ public class DocumentController {
 
             // Insert vào database với status PENDING (chờ intern xác nhận)
             String insertSql = """
-                INSERT INTO intern_documents (intern_id, document_name, document_type, uploaded_at, status, file_detail)
-                VALUES (?, ?, ?, NOW(), 'PENDING', ?)
-                """;
+                    INSERT INTO intern_documents (intern_id, document_name, document_type, uploaded_at, status, file_detail)
+                    VALUES (?, ?, ?, NOW(), 'PENDING', ?)
+                    """;
 
             jdbcTemplate.update(insertSql, internId, fileName, documentType, fileDetail);
 
@@ -599,11 +599,11 @@ public class DocumentController {
 
             // Cập nhật status thành CONFIRMED
             String updateSql = """
-                UPDATE intern_documents 
-                SET status = 'CONFIRMED',
-                    reviewed_at = NOW()
-                WHERE document_id = ?
-                """;
+                    UPDATE intern_documents 
+                    SET status = 'CONFIRMED',
+                        reviewed_at = NOW()
+                    WHERE document_id = ?
+                    """;
 
             jdbcTemplate.update(updateSql, id);
 

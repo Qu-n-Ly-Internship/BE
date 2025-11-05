@@ -40,8 +40,8 @@ public class ProjectController {
     // ✅ Cập nhật project
     @PutMapping("/{id}/{userId}")
     public ProjectRequest updateProject(@PathVariable Long id,
-                                    @PathVariable Long userId,
-                                    @RequestBody ProjectRequest request) {
+                                        @PathVariable Long userId,
+                                        @RequestBody ProjectRequest request) {
         return projectService.updateProject(id, request, userId);
     }
 
@@ -97,7 +97,6 @@ public class ProjectController {
     ) {
         return projectService.filterProjects(programId, departmentId);
     }
-
 
 
 }

@@ -77,13 +77,13 @@ public class PermissionController {
         try {
             var roles = permissionService.getAllRoles();
             return ResponseEntity.ok(Map.of(
-                "success", true,
-                "data", roles
+                    "success", true,
+                    "data", roles
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Lỗi khi lấy danh sách roles: " + e.getMessage()
+                    "success", false,
+                    "message", "Lỗi khi lấy danh sách roles: " + e.getMessage()
             ));
         }
     }
@@ -93,13 +93,13 @@ public class PermissionController {
         try {
             Map<String, Object> result = permissionService.getRoleWithPermissions(roleId);
             return ResponseEntity.ok(Map.of(
-                "success", true,
-                "data", result
+                    "success", true,
+                    "data", result
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", e.getMessage()
+                    "success", false,
+                    "message", e.getMessage()
             ));
         }
     }
@@ -115,8 +115,8 @@ public class PermissionController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Lỗi: " + e.getMessage()
+                    "success", false,
+                    "message", "Lỗi: " + e.getMessage()
             ));
         }
     }
@@ -128,13 +128,13 @@ public class PermissionController {
         try {
             Map<String, Object> stats = permissionService.getPermissionStats();
             return ResponseEntity.ok(Map.of(
-                "success", true,
-                "data", stats
+                    "success", true,
+                    "data", stats
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Lỗi khi lấy thống kê: " + e.getMessage()
+                    "success", false,
+                    "message", "Lỗi khi lấy thống kê: " + e.getMessage()
             ));
         }
     }

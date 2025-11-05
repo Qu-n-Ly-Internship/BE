@@ -10,5 +10,5 @@ public interface ProgramRepository extends JpaRepository<Program, Long> {
     @Query("SELECT p.hr.id FROM Program p WHERE p.id = :programId")
     Long findHrIdByProgramId(@Param("programId") Long programId);
 
-    
+
 }

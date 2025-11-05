@@ -59,7 +59,6 @@ public class DataInitializer implements CommandLineRunner {
                 {"DELETE_STUDENT", "Xóa sinh viên", "STUDENT_MANAGEMENT"},
 
 
-
                 // User Management
                 {"MANAGE_USERS", "Quản lý người dùng", "USER_MANAGEMENT"},
 

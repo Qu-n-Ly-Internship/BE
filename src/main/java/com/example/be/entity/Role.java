@@ -25,9 +25,9 @@ public class Role {
 
     @ManyToMany
     @JoinTable(
-        name = "role_permissions",
-        joinColumns = @JoinColumn(name = "role_id"),
-        inverseJoinColumns = @JoinColumn(name = "permission_id")
+            name = "role_permissions",
+            joinColumns = @JoinColumn(name = "role_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

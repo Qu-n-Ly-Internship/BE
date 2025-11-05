@@ -3,6 +3,7 @@ package com.example.be.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
+
 import java.util.Date;
 
 @Entity
@@ -48,23 +49,53 @@ public class Program {
 
 
     // --- Getters & Setters ---
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getProgramName() { return programName; }
-    public void setProgramName(String programName) { this.programName = programName; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Date getDateCreate() { return dateCreate; }
-    public void setDateCreate(Date dateCreate) { this.dateCreate = dateCreate; }
+    public String getProgramName() {
+        return programName;
+    }
 
-    public Date getDateEnd() { return dateEnd; }
-    public void setDateEnd(Date dateEnd) { this.dateEnd = dateEnd; }
+    public void setProgramName(String programName) {
+        this.programName = programName;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public Date getDateCreate() {
+        return dateCreate;
+    }
 
-    public Hr getHr() { return hr; }
-    public void setHr(Hr hr) { this.hr = hr; }
+    public void setDateCreate(Date dateCreate) {
+        this.dateCreate = dateCreate;
+    }
+
+    public Date getDateEnd() {
+        return dateEnd;
+    }
+
+    public void setDateEnd(Date dateEnd) {
+        this.dateEnd = dateEnd;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Hr getHr() {
+        return hr;
+    }
+
+    public void setHr(Hr hr) {
+        this.hr = hr;
+    }
 
     @Transient
     public Long getHrId() {
@@ -72,6 +103,11 @@ public class Program {
     }
 
 
-    public Date getUploadedAt() { return uploadedAt; }
-    public void setUploadedAt(Date uploadedAt) { this.uploadedAt = uploadedAt; }
+    public Date getUploadedAt() {
+        return uploadedAt;
+    }
+
+    public void setUploadedAt(Date uploadedAt) {
+        this.uploadedAt = uploadedAt;
+    }
 }
