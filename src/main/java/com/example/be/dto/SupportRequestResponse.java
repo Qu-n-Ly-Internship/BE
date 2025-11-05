@@ -14,7 +14,9 @@ public class SupportRequestResponse {
     
     private Integer internId;
 
-    private Integer userID;
+    private Integer userId;
+    private String internName;
+    private String internEmail;
     
     private Long hrId;
     
