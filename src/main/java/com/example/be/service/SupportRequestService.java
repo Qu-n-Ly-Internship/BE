@@ -2,6 +2,7 @@ package com.example.be.service;
 
 import com.example.be.dto.SupportRequestDTO;
 import com.example.be.entity.SupportRequest;
+import com.example.be.dto.SupportRequestResponse;
 import com.example.be.repository.SupportRequestRepository;
 import com.example.be.repository.InternProfileRepository;
 import com.example.be.entity.InternProfile;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.stream.Collectors;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -62,13 +64,50 @@ public class SupportRequestService {
                 Sort.by(sortBy != null ? sortBy : "createdAt").descending());
         Page<SupportRequest> pageResult = supportRequestRepository.findAll(pageable);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("content", pageResult.getContent());
-        response.put("currentPage", pageResult.getNumber());
-        response.put("totalItems", pageResult.getTotalElements());
-        response.put("totalPages", pageResult.getTotalPages());
+        // ⭐ Chuyển đổi sang DTO có tên thực tập sinh
+        List<SupportRequestResponse> responses = pageResult.getContent().stream()
+                .map(request -> {
+                    SupportRequestResponse response = SupportRequestResponse.builder()
+                            .id(request.getId())
+                            .internId(request.getInternId())
+                            .userId(request.getUserId())
+                            .hrId(request.getHrId())
+                            .subject(request.getSubject())
+                            .message(request.getMessage())
+                            .attachmentFileId(request.getAttachmentFileId())
+                            .status(request.getStatus())
+                            .priority(request.getPriority())
+                            .createdAt(request.getCreatedAt())
+                            .respondedAt(request.getRespondedAt())
+                            .resolvedAt(request.getResolvedAt())
+                            .hrResponse(request.getHrResponse())
+                            .build();
 
-        return response;
+                    // ⭐ Lấy tên thực tập sinh nếu có internId
+                    if (request.getInternId() != null) {
+                        try {
+                            InternProfile profile = internProfileRepository.findById(request.getInternId().longValue())
+                                    .orElse(null);
+                            if (profile != null) {
+                                response.setInternName(profile.getFullName());
+                                response.setInternEmail(profile.getEmail());
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Cannot find intern profile for internId: " + request.getInternId());
+                        }
+                    }
+
+                    return response;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", responses);
+        result.put("currentPage", pageResult.getNumber());
+        result.put("totalItems", pageResult.getTotalElements());
+        result.put("totalPages", pageResult.getTotalPages());
+
+        return result;
     }
 
     public SupportRequest processRequest(Long requestId, Long hrId, String response, String status) {
