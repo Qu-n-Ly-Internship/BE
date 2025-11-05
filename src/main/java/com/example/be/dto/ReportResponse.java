@@ -2,6 +2,7 @@ package com.example.be.dto;
 
 import com.example.be.entity.Report;
 import lombok.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 

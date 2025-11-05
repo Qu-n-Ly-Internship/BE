@@ -106,11 +106,11 @@ public class InternProfileController {
     public ResponseEntity<?> getAllPrograms() {
         try {
             String sql = """
-                SELECT DISTINCT title 
-                FROM intern_programs 
-                WHERE title IS NOT NULL 
-                ORDER BY title
-                """;
+                    SELECT DISTINCT title 
+                    FROM intern_programs 
+                    WHERE title IS NOT NULL 
+                    ORDER BY title
+                    """;
 
             List<String> programs = jdbcTemplate.queryForList(sql, String.class);
 

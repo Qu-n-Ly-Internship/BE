@@ -17,13 +17,13 @@ public interface DocumentRepository extends JpaRepository<InternDocument, Long> 
 
     // 🔹 Lấy document mới nhất cho mỗi intern
     @Query(value = """
-        SELECT d.*
-        FROM intern_documents d
-        INNER JOIN (
-            SELECT intern_id, MAX(document_id) AS max_id
-            FROM intern_documents
-            GROUP BY intern_id
-        ) latest ON d.document_id = latest.max_id
-    """, nativeQuery = true)
+                SELECT d.*
+                FROM intern_documents d
+                INNER JOIN (
+                    SELECT intern_id, MAX(document_id) AS max_id
+                    FROM intern_documents
+                    GROUP BY intern_id
+                ) latest ON d.document_id = latest.max_id
+            """, nativeQuery = true)
     List<InternDocument> findLatestDocumentPerIntern();
 }

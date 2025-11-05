@@ -21,19 +21,19 @@ public class PermissionService {
         try {
             List<Permission> permissions = permissionRepository.findAll();
             List<Map<String, Object>> permissionList = permissions.stream()
-                .map(p -> {
-                    Map<String, Object> permMap = new HashMap<>();
-                    permMap.put("permission_id", p.getId());
-                    permMap.put("permission_name", p.getName());
-                    permMap.put("description", p.getDescription() != null ? p.getDescription() : "");
-                    permMap.put("module", p.getModule() != null ? p.getModule() : "");
-                    permMap.put("roles", String.join(",",
-                        p.getRoles().stream()
-                            .map(Role::getName)
-                            .collect(Collectors.toList())));
-                    return permMap;
-                })
-                .toList();
+                    .map(p -> {
+                        Map<String, Object> permMap = new HashMap<>();
+                        permMap.put("permission_id", p.getId());
+                        permMap.put("permission_name", p.getName());
+                        permMap.put("description", p.getDescription() != null ? p.getDescription() : "");
+                        permMap.put("module", p.getModule() != null ? p.getModule() : "");
+                        permMap.put("roles", String.join(",",
+                                p.getRoles().stream()
+                                        .map(Role::getName)
+                                        .collect(Collectors.toList())));
+                        return permMap;
+                    })
+                    .toList();
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -48,17 +48,17 @@ public class PermissionService {
     public Map<String, Object> getRolePermissions(String roleName) {
         try {
             Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
+                    .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
 
             List<Map<String, Object>> permissions = role.getPermissions().stream()
-                .map(p -> {
-                    Map<String, Object> permMap = new HashMap<>();
-                    permMap.put("permission_id", p.getId());
-                    permMap.put("name", p.getName());
-                    permMap.put("description", p.getDescription() != null ? p.getDescription() : "");
-                    return permMap;
-                })
-                .toList();
+                    .map(p -> {
+                        Map<String, Object> permMap = new HashMap<>();
+                        permMap.put("permission_id", p.getId());
+                        permMap.put("name", p.getName());
+                        permMap.put("description", p.getDescription() != null ? p.getDescription() : "");
+                        return permMap;
+                    })
+                    .toList();
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -77,17 +77,17 @@ public class PermissionService {
                     .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + roleName));
 
             Set<Permission> newPermissions = permissionNames.stream()
-                .map(name -> permissionRepository.findByName(name)
-                    .orElseThrow(() -> new RuntimeException("Permission không tồn tại: " + name)))
-                .collect(Collectors.toSet());
+                    .map(name -> permissionRepository.findByName(name)
+                            .orElseThrow(() -> new RuntimeException("Permission không tồn tại: " + name)))
+                    .collect(Collectors.toSet());
 
             role.setPermissions(newPermissions);
             roleRepository.save(role);
 
             return Map.of(
-                "success", true,
-                "message", "Cập nhật quyền thành công cho role: " + roleName,
-                "permissions", permissionNames
+                    "success", true,
+                    "message", "Cập nhật quyền thành công cho role: " + roleName,
+                    "permissions", permissionNames
             );
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi cập nhật quyền: " + e.getMessage());
@@ -111,22 +111,22 @@ public class PermissionService {
             }
 
             Permission permission = Permission.builder()
-                .name(normalizedName)
-                .description(description)
-                .module(module)
-                .build();
+                    .name(normalizedName)
+                    .description(description)
+                    .module(module)
+                    .build();
 
             permission = permissionRepository.save(permission);
 
             return Map.of(
-                "success", true,
-                "message", "Tạo quyền mới thành công",
-                "data", Map.of(
-                    "id", permission.getId(),
-                    "name", permission.getName(),
-                    "description", permission.getDescription(),
-                    "module", permission.getModule()
-                )
+                    "success", true,
+                    "message", "Tạo quyền mới thành công",
+                    "data", Map.of(
+                            "id", permission.getId(),
+                            "name", permission.getName(),
+                            "description", permission.getDescription(),
+                            "module", permission.getModule()
+                    )
             );
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi tạo quyền mới: " + e.getMessage());
@@ -142,7 +142,7 @@ public class PermissionService {
             if (request.containsKey("name")) {
                 String newName = request.get("name").toUpperCase().trim();
                 if (!newName.equals(permission.getName()) &&
-                    permissionRepository.findByName(newName).isPresent()) {
+                        permissionRepository.findByName(newName).isPresent()) {
                     throw new IllegalArgumentException("Tên quyền đã tồn tại: " + newName);
                 }
                 permission.setName(newName);
@@ -158,14 +158,14 @@ public class PermissionService {
             permission = permissionRepository.save(permission);
 
             return Map.of(
-                "success", true,
-                "message", "Cập nhật permission thành công!",
-                "data", Map.of(
-                    "id", permission.getId(),
-                    "name", permission.getName(),
-                    "description", permission.getDescription(),
-                    "module", permission.getModule()
-                )
+                    "success", true,
+                    "message", "Cập nhật permission thành công!",
+                    "data", Map.of(
+                            "id", permission.getId(),
+                            "name", permission.getName(),
+                            "description", permission.getDescription(),
+                            "module", permission.getModule()
+                    )
             );
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi cập nhật permission: " + e.getMessage());
@@ -214,15 +214,15 @@ public class PermissionService {
                     .orElseThrow(() -> new RuntimeException("Role không tồn tại!"));
 
             List<Map<String, Object>> permissions = role.getPermissions().stream()
-                .map(p -> {
-                    Map<String, Object> permMap = new HashMap<>();
-                    permMap.put("id", p.getId());
-                    permMap.put("name", p.getName());
-                    permMap.put("description", p.getDescription() != null ? p.getDescription() : "");
-                    permMap.put("module", p.getModule() != null ? p.getModule() : "");
-                    return permMap;
-                })
-                .toList();
+                    .map(p -> {
+                        Map<String, Object> permMap = new HashMap<>();
+                        permMap.put("id", p.getId());
+                        permMap.put("name", p.getName());
+                        permMap.put("description", p.getDescription() != null ? p.getDescription() : "");
+                        permMap.put("module", p.getModule() != null ? p.getModule() : "");
+                        return permMap;
+                    })
+                    .toList();
 
             Map<String, Object> roleMap = new HashMap<>();
             roleMap.put("id", role.getId());
@@ -232,8 +232,8 @@ public class PermissionService {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("data", Map.of(
-                "role", roleMap,
-                "permissions", permissions
+                    "role", roleMap,
+                    "permissions", permissions
             ));
             return response;
         } catch (Exception e) {
@@ -249,19 +249,19 @@ public class PermissionService {
 
             Set<Permission> permissions = permissionIds.stream()
                     .map(id -> permissionRepository.findById(Long.valueOf(id))
-                        .orElseThrow(() -> new RuntimeException("Permission không tồn tại: " + id)))
+                            .orElseThrow(() -> new RuntimeException("Permission không tồn tại: " + id)))
                     .collect(Collectors.toSet());
 
             role.setPermissions(permissions);
             roleRepository.save(role);
 
             return Map.of(
-                "success", true,
-                "message", "Cập nhật quyền cho role " + role.getName() + " thành công!",
-                "data", Map.of(
-                    "roleId", role.getId(),
-                    "permissionCount", permissions.size()
-                )
+                    "success", true,
+                    "message", "Cập nhật quyền cho role " + role.getName() + " thành công!",
+                    "data", Map.of(
+                            "roleId", role.getId(),
+                            "permissionCount", permissions.size()
+                    )
             );
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi cập nhật quyền: " + e.getMessage());
@@ -275,24 +275,24 @@ public class PermissionService {
 
             var moduleStats = permissions.stream()
                     .collect(Collectors.groupingBy(
-                        p -> p.getModule() != null ? p.getModule() : "OTHER",
-                        Collectors.counting()
+                            p -> p.getModule() != null ? p.getModule() : "OTHER",
+                            Collectors.counting()
                     ));
 
             var roleStats = roles.stream()
                     .collect(Collectors.toMap(
-                        Role::getName,
-                        role -> role.getPermissions().size()
+                            Role::getName,
+                            role -> role.getPermissions().size()
                     ));
 
             return Map.of(
-                "success", true,
-                "data", Map.of(
-                    "totalPermissions", permissions.size(),
-                    "totalRoles", roles.size(),
-                    "moduleStats", moduleStats,
-                    "roleStats", roleStats
-                )
+                    "success", true,
+                    "data", Map.of(
+                            "totalPermissions", permissions.size(),
+                            "totalRoles", roles.size(),
+                            "moduleStats", moduleStats,
+                            "roleStats", roleStats
+                    )
             );
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi lấy thống kê: " + e.getMessage());

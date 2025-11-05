@@ -2,22 +2,16 @@ package com.example.be.config;
 
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import lombok.RequiredArgsConstructor;
 
 @Configuration
 @RequiredArgsConstructor
@@ -26,52 +20,45 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
+    // ======================= API CHAIN =======================
     @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    @Order(1)
+    public SecurityFilterChain apiSecurity(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/**") // RẤT QUAN TRỌNG
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> {})
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll() // Cho phép toàn bộ /api/**
+                )
+                .oauth2Login(oauth -> oauth.disable()) // Không dùng OAuth2
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable());
+
+        return http.build();
     }
 
+    // ======================= WEB CHAIN =======================
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Order(2)
+    public SecurityFilterChain webSecurity(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {
-                })
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",
-                                "/api/admin/**",
-                                "/api/cvs/**",
-                                "/api/email/**",
-                                "/api/documents/**",
-                                "/api/profiles/**",
-                                "/api/interns/**",
-                                "/api/allowances/**",
-                                "/api/intern-profiles/**",
-                                "/api/mentors/**",
-                                "/api/internships/**",
-                                "/api/profile/**",
-                                "/api/programs/**",
-                                "/api/departments/**",
-                                "/api/projects/**",
-                                "/api/reports/**",
-                                "/api/support-requests/**",
-                                "/api/leave-requests/**",
-                                "/api/tasks/**",
-                                "/api/attendance/**",
                                 "/oauth2/**",
                                 "/oauth2/authorization/**",
                                 "/login/oauth2/**",
-                                "/login/**")
-
-                        .permitAll()
-                        .anyRequest().authenticated())
+                                "/login/**"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
                 .formLogin(login -> login.disable())
                 .httpBasic(basic -> basic.disable())
-                // Thêm OAuth2 login
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                        .successHandler(oAuth2LoginSuccessHandler));
+                        .successHandler(oAuth2LoginSuccessHandler)
+                );
 
         // Cho phép H2 console chạy trong frame
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
@@ -79,6 +66,7 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // ======================= CORS =======================
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
@@ -91,5 +79,11 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
 
         return new CorsFilter(source);
+    }
+
+    // ======================= Password encoder =======================
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

@@ -16,57 +16,57 @@ import java.util.Optional;
 public interface InternRepository extends JpaRepository<InternProfile, Long> {
 
     @Query(value = """
-        SELECT * FROM intern_profiles i
-        WHERE (:query IS NULL OR 
-              LOWER(i.full_name) LIKE LOWER(CONCAT('%', :query, '%')) OR
-              LOWER(i.email) LIKE LOWER(CONCAT('%', :query, '%')))
-        AND (:university IS NULL OR LOWER(i.university) = LOWER(:university))
-        AND (:major IS NULL OR LOWER(i.major) = LOWER(:major))
-        AND (:program IS NULL OR LOWER(i.program) = LOWER(:program))
-        AND (:yearOfStudy IS NULL OR i.year_of_study = :yearOfStudy)
-        AND (:status IS NULL OR UPPER(i.status) = UPPER(:status))
-        ORDER BY i.updated_at DESC
-    """,
-    countQuery = """
-        SELECT COUNT(*) FROM intern_profiles i
-        WHERE (:query IS NULL OR 
-              LOWER(i.full_name) LIKE LOWER(CONCAT('%', :query, '%')) OR
-              LOWER(i.email) LIKE LOWER(CONCAT('%', :query, '%')))
-        AND (:university IS NULL OR LOWER(i.university) = LOWER(:university))
-        AND (:major IS NULL OR LOWER(i.major) = LOWER(:major))
-        AND (:program IS NULL OR LOWER(i.program) = LOWER(:program))
-        AND (:yearOfStudy IS NULL OR i.year_of_study = :yearOfStudy)
-        AND (:status IS NULL OR UPPER(i.status) = UPPER(:status))
-    """,
-    nativeQuery = true)
+                SELECT * FROM intern_profiles i
+                WHERE (:query IS NULL OR 
+                      LOWER(i.full_name) LIKE LOWER(CONCAT('%', :query, '%')) OR
+                      LOWER(i.email) LIKE LOWER(CONCAT('%', :query, '%')))
+                AND (:university IS NULL OR LOWER(i.university) = LOWER(:university))
+                AND (:major IS NULL OR LOWER(i.major) = LOWER(:major))
+                AND (:program IS NULL OR LOWER(i.program) = LOWER(:program))
+                AND (:yearOfStudy IS NULL OR i.year_of_study = :yearOfStudy)
+                AND (:status IS NULL OR UPPER(i.status) = UPPER(:status))
+                ORDER BY i.updated_at DESC
+            """,
+            countQuery = """
+                        SELECT COUNT(*) FROM intern_profiles i
+                        WHERE (:query IS NULL OR 
+                              LOWER(i.full_name) LIKE LOWER(CONCAT('%', :query, '%')) OR
+                              LOWER(i.email) LIKE LOWER(CONCAT('%', :query, '%')))
+                        AND (:university IS NULL OR LOWER(i.university) = LOWER(:university))
+                        AND (:major IS NULL OR LOWER(i.major) = LOWER(:major))
+                        AND (:program IS NULL OR LOWER(i.program) = LOWER(:program))
+                        AND (:yearOfStudy IS NULL OR i.year_of_study = :yearOfStudy)
+                        AND (:status IS NULL OR UPPER(i.status) = UPPER(:status))
+                    """,
+            nativeQuery = true)
     Page<Map<String, Object>> searchInterns(
-        @Param("query") String query,
-        @Param("university") String university,
-        @Param("major") String major,
-        @Param("program") String program,
-        @Param("yearOfStudy") Integer yearOfStudy,
-        @Param("status") String status,
-        Pageable pageable
+            @Param("query") String query,
+            @Param("university") String university,
+            @Param("major") String major,
+            @Param("program") String program,
+            @Param("yearOfStudy") Integer yearOfStudy,
+            @Param("status") String status,
+            Pageable pageable
     );
 
     @Query(value = "SELECT DISTINCT university FROM intern_profiles WHERE university IS NOT NULL ORDER BY university",
-           nativeQuery = true)
+            nativeQuery = true)
     List<String> findDistinctUniversities();
 
     @Query(value = "SELECT DISTINCT major FROM intern_profiles WHERE major IS NOT NULL ORDER BY major",
-           nativeQuery = true)
+            nativeQuery = true)
     List<String> findDistinctMajors();
 
     @Query(value = "SELECT status, COUNT(*) FROM intern_profiles GROUP BY status",
-           nativeQuery = true)
+            nativeQuery = true)
     List<Object[]> countByStatus();
 
     @Query(value = "SELECT university, COUNT(*) FROM intern_profiles WHERE university IS NOT NULL GROUP BY university",
-           nativeQuery = true)
+            nativeQuery = true)
     List<Object[]> countByUniversity();
 
     @Query(value = "SELECT program, COUNT(*) FROM intern_profiles WHERE program IS NOT NULL GROUP BY program",
-           nativeQuery = true)
+            nativeQuery = true)
     List<Object[]> countByProgram();
 
     Optional<InternProfile> findByUser_Id(Long userId);

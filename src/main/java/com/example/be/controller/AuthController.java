@@ -18,8 +18,8 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173", methods = { RequestMethod.GET, RequestMethod.POST,
-        RequestMethod.OPTIONS }, allowCredentials = "true")
+@CrossOrigin(origins = "http://localhost:5173", methods = {RequestMethod.GET, RequestMethod.POST,
+        RequestMethod.OPTIONS}, allowCredentials = "true")
 public class AuthController {
 
     private final AuthService authService;

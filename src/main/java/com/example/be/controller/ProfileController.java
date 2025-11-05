@@ -46,19 +46,19 @@ public class ProfileController {
             // Nếu là INTERN hoặc USER, lấy thêm thông tin từ intern_profiles
             if ("INTERN".equals(user.getRole().getName()) || "USER".equals(user.getRole().getName())) {
                 String sql = """
-                    SELECT i.intern_id, i.fullname, i.dob, i.major_id, i.year_of_study, i.phone, i.available_from,
-                           u.name_uni as university_name,
-                           p.title as program_title, p.start_date, p.end_date
-                    FROM intern_profiles i
-                    LEFT JOIN universities u ON i.uni_id = u.uni_id
-                    LEFT JOIN intern_programs p ON i.program_id = p.program_id
-                    WHERE i.fullname = ? OR i.phone = ?
-                    LIMIT 1
-                    """;
+                        SELECT i.intern_id, i.fullname, i.dob, i.major_id, i.year_of_study, i.phone, i.available_from,
+                               u.name_uni as university_name,
+                               p.title as program_title, p.start_date, p.end_date
+                        FROM intern_profiles i
+                        LEFT JOIN universities u ON i.uni_id = u.uni_id
+                        LEFT JOIN intern_programs p ON i.program_id = p.program_id
+                        WHERE i.fullname = ? OR i.phone = ?
+                        LIMIT 1
+                        """;
 
-                List<Map<String, Object>> internData = jdbcTemplate.queryForList(sql, 
-                    user.getFullName(), 
-                    user.getEmail().split("@")[0]
+                List<Map<String, Object>> internData = jdbcTemplate.queryForList(sql,
+                        user.getFullName(),
+                        user.getEmail().split("@")[0]
                 );
 
                 if (!internData.isEmpty()) {
@@ -142,14 +142,14 @@ public class ProfileController {
             // TODO: Nếu cần cập nhật thông tin intern_profiles, thêm logic ở đây
 
             return ResponseEntity.ok(Map.of(
-                "message", "Cập nhật profile thành công!",
-                "user", Map.of(
-                    "id", user.getId(),
-                    "email", user.getEmail(),
-                    "fullName", user.getFullName(),
-                    "role", user.getRole().getName(),
-                    "status", user.getStatus()
-                )
+                    "message", "Cập nhật profile thành công!",
+                    "user", Map.of(
+                            "id", user.getId(),
+                            "email", user.getEmail(),
+                            "fullName", user.getFullName(),
+                            "role", user.getRole().getName(),
+                            "status", user.getStatus()
+                    )
             ));
 
         } catch (Exception e) {

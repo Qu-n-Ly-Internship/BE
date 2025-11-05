@@ -73,15 +73,15 @@ public class ProfileService {
 
     private Map<String, Object> getInternProfileData(User user) {
         String sql = """
-            SELECT i.intern_id, i.fullname, i.dob, i.major_id, i.year_of_study, i.phone, i.available_from,
-                   u.name_uni as university_name,
-                   p.title as program_title, p.start_date, p.end_date
-            FROM intern_profiles i
-            LEFT JOIN universities u ON i.uni_id = u.uni_id
-            LEFT JOIN intern_programs p ON i.program_id = p.program_id
-            WHERE i.fullname = ? OR i.phone = ?
-            LIMIT 1
-            """;
+                SELECT i.intern_id, i.fullname, i.dob, i.major_id, i.year_of_study, i.phone, i.available_from,
+                       u.name_uni as university_name,
+                       p.title as program_title, p.start_date, p.end_date
+                FROM intern_profiles i
+                LEFT JOIN universities u ON i.uni_id = u.uni_id
+                LEFT JOIN intern_programs p ON i.program_id = p.program_id
+                WHERE i.fullname = ? OR i.phone = ?
+                LIMIT 1
+                """;
 
         List<Map<String, Object>> internData = jdbcTemplate.queryForList(sql,
                 user.getFullName(),
@@ -142,14 +142,14 @@ public class ProfileService {
         User savedUser = userRepository.save(user);
 
         return Map.of(
-            "message", "Cập nhật profile thành công!",
-            "user", Map.of(
-                "id", savedUser.getId(),
-                "email", savedUser.getEmail(),
-                "fullName", savedUser.getFullName(),
-                "role", savedUser.getRole().getName(),
-                "status", savedUser.getStatus()
-            )
+                "message", "Cập nhật profile thành công!",
+                "user", Map.of(
+                        "id", savedUser.getId(),
+                        "email", savedUser.getEmail(),
+                        "fullName", savedUser.getFullName(),
+                        "role", savedUser.getRole().getName(),
+                        "status", savedUser.getStatus()
+                )
         );
     }
 

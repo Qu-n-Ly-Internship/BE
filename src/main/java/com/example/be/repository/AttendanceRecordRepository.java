@@ -14,6 +14,7 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     Optional<AttendanceRecord> findByInternIdAndWorkDate(@Param("internId") Long internId, @Param("date") LocalDate date);
 
     List<AttendanceRecord> findAllByWorkDate(LocalDate date);
+
     List<AttendanceRecord> findByInternId(Long internId);
 }
 

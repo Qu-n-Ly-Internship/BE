@@ -1,6 +1,7 @@
 package com.example.be.service;
 
 import com.example.be.entity.*;
+import com.example.be.notification.service.NotificationPublisher;
 import com.example.be.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -20,6 +21,7 @@ public class TaskService {
     private final InternProfileRepository internProfileRepository;
     private final MentorRepository mentorRepository; // ✅ Thêm MentorRepository
     private final JdbcTemplate jdbcTemplate;
+    private final NotificationPublisher notificationPublisher;
 
     // ✅ Lấy intern_id từ user_id
     public Long getInternIdByUserId(Long userId) {
@@ -41,22 +43,22 @@ public class TaskService {
     public Map<String, Object> getTasksByIntern(Long internId) {
         try {
             String sql = """
-                SELECT 
-                    t.task_id,
-                    t.title,
-                    t.description,
-                    t.priority,
-                    t.status,
-                    t.created_at,
-                    t.due_date,
-                    t.assigned_to,
-                    t.assigned_by,
-                    m.fullname as mentor_name
-                FROM task t
-                LEFT JOIN mentors m ON t.assigned_by = m.mentor_id
-                WHERE t.assigned_to = ?
-                ORDER BY t.created_at DESC
-                """;
+                    SELECT 
+                        t.task_id,
+                        t.title,
+                        t.description,
+                        t.priority,
+                        t.status,
+                        t.created_at,
+                        t.due_date,
+                        t.assigned_to,
+                        t.assigned_by,
+                        m.fullname as mentor_name
+                    FROM task t
+                    LEFT JOIN mentors m ON t.assigned_by = m.mentor_id
+                    WHERE t.assigned_to = ?
+                    ORDER BY t.created_at DESC
+                    """;
 
             List<Map<String, Object>> tasks = jdbcTemplate.queryForList(sql, internId);
 
@@ -101,23 +103,23 @@ public class TaskService {
             Long internId = getInternIdByUserId(userId);
 
             String sql = """
-                SELECT 
-                    t.task_id,
-                    t.title as task,
-                    t.description,
-                    t.priority,
-                    t.status,
-                    t.created_at as start_date,
-                    t.due_date as end_date,
-                    ip.fullname as intern_name,
-                    m.fullname as mentor_name,
-                    'Thực tập' as department
-                FROM task t
-                LEFT JOIN intern_profiles ip ON t.assigned_to = ip.intern_id
-                LEFT JOIN mentors m ON t.assigned_by = m.mentor_id
-                WHERE t.assigned_to = ?
-                ORDER BY t.created_at DESC
-                """;
+                    SELECT 
+                        t.task_id,
+                        t.title as task,
+                        t.description,
+                        t.priority,
+                        t.status,
+                        t.created_at as start_date,
+                        t.due_date as end_date,
+                        ip.fullname as intern_name,
+                        m.fullname as mentor_name,
+                        'Thực tập' as department
+                    FROM task t
+                    LEFT JOIN intern_profiles ip ON t.assigned_to = ip.intern_id
+                    LEFT JOIN mentors m ON t.assigned_by = m.mentor_id
+                    WHERE t.assigned_to = ?
+                    ORDER BY t.created_at DESC
+                    """;
 
             List<Map<String, Object>> schedule = jdbcTemplate.queryForList(sql, internId);
 
@@ -153,23 +155,23 @@ public class TaskService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin mentor"));
 
             String sql = """
-                SELECT 
-                    t.task_id,
-                    t.title,
-                    t.description,
-                    t.priority,
-                    t.status,
-                    t.created_at,
-                    t.due_date,
-                    ip.fullname as intern_name,
-                    ip.email as intern_email,
-                    m.fullname as assigned_by_name
-                FROM task t
-                LEFT JOIN intern_profiles ip ON t.assigned_to = ip.intern_id
-                LEFT JOIN mentors m ON t.assigned_by = m.mentor_id
-                WHERE t.assigned_by = ?
-                ORDER BY t.created_at DESC
-                """;
+                    SELECT 
+                        t.task_id,
+                        t.title,
+                        t.description,
+                        t.priority,
+                        t.status,
+                        t.created_at,
+                        t.due_date,
+                        ip.fullname as intern_name,
+                        ip.email as intern_email,
+                        m.fullname as assigned_by_name
+                    FROM task t
+                    LEFT JOIN intern_profiles ip ON t.assigned_to = ip.intern_id
+                    LEFT JOIN mentors m ON t.assigned_by = m.mentor_id
+                    WHERE t.assigned_by = ?
+                    ORDER BY t.created_at DESC
+                    """;
 
             List<Map<String, Object>> tasks = jdbcTemplate.queryForList(sql, mentor.getId());
 
@@ -206,25 +208,6 @@ public class TaskService {
             String priority = req.get("priority").toString();
             String dueDate = (String) req.get("dueDate");
             Long mentorUserId = Long.valueOf(req.get("assignedBy").toString());
-
-            // ✅ Map giá trị priority 1–3 sang HIGH/MEDIUM/LOW
-//            String priority;
-//            switch (priorityRaw) {
-//                case "1":
-//                case "HIGH":
-//                    priority = "HIGH";
-//                    break;
-//                case "2":
-//                case "MEDIUM":
-//                    priority = "MEDIUM";
-//                    break;
-//                case "3":
-//                case "LOW":
-//                    priority = "LOW";
-//                    break;
-//                default:
-//                    priority = "MEDIUM";
-//            }
 
             // ✅ Lấy thực tập sinh
             InternProfile intern = internRepository.findById(internId)
@@ -263,7 +246,40 @@ public class TaskService {
 
                 scheduleRepository.save(schedule);
             }
+            try {
+                // Lấy userId của intern để gửi notification
+                Long internUserId = intern.getUser() != null ? intern.getUser().getId() : null;
 
+                if (internUserId != null) {
+                    String priorityEmoji = switch (priority) {
+                        case "1" -> "🔴";
+                        case "2" -> "🟡";
+                        default -> "⚪";
+                    };
+
+                    String deadlineStr = LocalDate.parse(dueDate)
+                            .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+                    notificationPublisher.publish(
+                            internUserId.toString(),                    // userId
+                            "NEW_TASK",                                 // type
+                            "📋 Task mới từ " + mentor.getFullName(),  // title
+                            String.format(
+                                    "%s %s - Deadline: %s\n%s",
+                                    priorityEmoji,
+                                    title,
+                                    deadlineStr,
+                                    description != null ? description : ""
+                            )                                           // message
+                    );
+
+                    System.out.println("✅ Notification sent to intern userId: " + internUserId);
+                }
+            } catch (Exception e) {
+                // Không throw exception để không ảnh hưởng việc tạo task
+                System.err.println("❌ Failed to send notification: " + e.getMessage());
+                e.printStackTrace();
+            }
             return Map.of(
                     "success", true,
                     "message", "Giao việc thành công",
@@ -282,26 +298,55 @@ public class TaskService {
 
 
     // Cập nhật trạng thái công việc
-    public Map<String, Object> updateTaskStatus(Long taskId, String status) {
+    public Map<String, Object> updateTaskStatus(Long taskId, String newStatus) {
+
         try {
             Task task = taskRepository.findById(taskId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
-            task.setStatus(status);
+            String oldStatus = task.getStatus();
+            task.setStatus(newStatus);
             taskRepository.save(task);
-
             // Cập nhật lịch tương ứng (nếu có)
             try {
                 scheduleRepository.findAll().stream()
                         .filter(s -> s.getTask() != null && Objects.equals(s.getTask().getId(), taskId))
                         .forEach(s -> {
-                            s.setStatus(status.equals("COMPLETED") ? "DONE" : "PLANNED");
+                            s.setStatus(newStatus.equals("COMPLETED") ? "DONE" : "PLANNED");
                             scheduleRepository.save(s);
                         });
             } catch (Exception e) {
                 // Bỏ qua lỗi nếu không có schedule
                 System.out.println("No schedule to update: " + e.getMessage());
             }
+            Mentors mentor = task.getAssignedBy();
+            Long mentorUserId = mentor.getUser() != null ? mentor.getUser().getId() : null;
 
+            if (mentorUserId != null) {
+                String emoji = switch (task.getPriority()) {
+                    case "1" -> "🔴";
+                    case "2" -> "🟡";
+                    default -> "⚪";
+                };
+                String deadline = task.getDueDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM"));
+
+                String action = "IN_PROGRESS".equals(newStatus) ? "bắt đầu làm" : "HOÀN THÀNH";
+
+                notificationPublisher.publish(
+                        mentorUserId.toString(),
+                        "TASK_UPDATED",
+                        "Task được " + action,
+                        String.format(
+                                "%s %s\n" +
+                                        "Cập nhật bởi: %s\n" +
+                                        "Trạng thái: %s → %s\n" +
+                                        "Deadline: %s",
+                                emoji,
+                                task.getTitle(),
+                                task.getAssignedTo().getFullName(),
+                                oldStatus, newStatus, deadline
+                        )
+                );
+            }
             return Map.of("success", true, "message", "Cập nhật trạng thái thành công");
         } catch (Exception e) {
             e.printStackTrace();

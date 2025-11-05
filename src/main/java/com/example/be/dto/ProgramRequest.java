@@ -24,11 +24,31 @@ public class ProgramRequest {
     }
 
     // --- Getters ---
-    public Long getId() { return id; }
-    public String getProgramName() { return programName; }
-    public String getDescription() { return description; }
-    public Long getHrId() { return hrId; }
-    public String getHrName() { return hrName; }
-    public Date getDateCreate() { return dateCreate; }
-    public Date getDateEnd() { return dateEnd; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getProgramName() {
+        return programName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Long getHrId() {
+        return hrId;
+    }
+
+    public String getHrName() {
+        return hrName;
+    }
+
+    public Date getDateCreate() {
+        return dateCreate;
+    }
+
+    public Date getDateEnd() {
+        return dateEnd;
+    }
 }

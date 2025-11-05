@@ -1,6 +1,7 @@
 package com.example.be.service;
 
 import com.example.be.config.JwtUtil;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import com.example.be.entity.User;
 import com.example.be.repository.RoleRepository;
 import com.example.be.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+
 import java.util.*;
 
 @Service
@@ -213,4 +215,5 @@ public class AuthService {
 
                     return userRepository.save(newUser);
                 });
-    }}
+    }
+}
