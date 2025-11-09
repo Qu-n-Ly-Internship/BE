@@ -26,4 +26,8 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     // Method cho phân trang và sắp xếp theo ngày giảm dần
     @Query("SELECT ar FROM AttendanceRecord ar WHERE ar.intern.id = :internId ORDER BY ar.workDate DESC")
     Page<AttendanceRecord> findByInternIdOrderByWorkDateDesc(@Param("internId") Long internId, Pageable pageable);
+
+    // Method cho report - lấy tất cả records trong khoảng thời gian
+    @Query("SELECT ar FROM AttendanceRecord ar WHERE ar.workDate BETWEEN :startDate AND :endDate")
+    List<AttendanceRecord> findAllByWorkDateBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

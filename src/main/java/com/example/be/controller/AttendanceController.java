@@ -2,6 +2,7 @@ package com.example.be.controller;
 
 import com.example.be.dto.AttendanceHistoryDTO;
 import com.example.be.dto.AttendanceRecordDTO;
+import com.example.be.dto.AttendanceReportDTO;
 import com.example.be.dto.ResponseWrapper;
 import com.example.be.entity.AttendanceRecord;
 import com.example.be.service.Attendance.AttendanceService;
@@ -105,6 +106,21 @@ public class AttendanceController {
     ) {
         AttendanceHistoryDTO history = attendanceService.getAttendanceHistory(userId, page, size);
         return ResponseEntity.ok(ResponseWrapper.success(history.getData(), "Lấy lịch sử thành công"));
+    }
+
+    // 9️⃣ API lấy báo cáo chuyên cần (cho HR/Admin)
+    @GetMapping("/report")
+    public ResponseEntity<ResponseWrapper<List<AttendanceReportDTO>>> getAttendanceReport(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) Long mentorId,
+            @RequestParam(required = false) String search
+    ) {
+        List<AttendanceReportDTO> report = attendanceService.getAttendanceReport(
+                startDate, endDate, department, mentorId, search
+        );
+        return ResponseEntity.ok(ResponseWrapper.success(report, "Lấy báo cáo thành công"));
     }
 
     // DTO cho request check-in/check-out

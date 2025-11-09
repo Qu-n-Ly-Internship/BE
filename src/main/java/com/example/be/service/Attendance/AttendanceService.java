@@ -2,6 +2,7 @@ package com.example.be.service.Attendance;
 
 import com.example.be.dto.AttendanceHistoryDTO;
 import com.example.be.dto.AttendanceRecordDTO;
+import com.example.be.dto.AttendanceReportDTO;
 import com.example.be.entity.AttendanceLog;
 import com.example.be.entity.AttendanceRecord;
 import com.example.be.entity.InternProfile;
@@ -21,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -233,6 +235,85 @@ public class AttendanceService {
         historyDTO.setCurrentPage(recordPage.getNumber());
         
         return historyDTO;
+    }
+
+    // ✅ 9. Lấy báo cáo chuyên cần (cho HR/Admin)
+    public List<AttendanceReportDTO> getAttendanceReport(
+            String startDate, 
+            String endDate, 
+            String department, 
+            Long mentorId, 
+            String search
+    ) {
+        LocalDate start = (startDate != null) ? LocalDate.parse(startDate) : LocalDate.now().withDayOfMonth(1);
+        LocalDate end = (endDate != null) ? LocalDate.parse(endDate) : LocalDate.now();
+
+        // Lấy tất cả records trong khoảng thời gian
+        List<AttendanceRecord> allRecords = recordRepo.findAllByWorkDateBetween(start, end);
+
+        // Group by intern và tính toán thống kê
+        Map<Long, List<AttendanceRecord>> groupedByIntern = allRecords.stream()
+                .collect(Collectors.groupingBy(record -> record.getIntern().getId()));
+
+        List<AttendanceReportDTO> reportList = groupedByIntern.entrySet().stream()
+                .map(entry -> {
+                    Long internId = entry.getKey();
+                    List<AttendanceRecord> records = entry.getValue();
+                    InternProfile intern = records.get(0).getIntern();
+
+                    // Tính toán các chỉ số
+                    long workingDays = records.stream()
+                            .filter(r -> r.getCheckInTime() != null)
+                            .count();
+
+                    long lateDays = records.stream()
+                            .filter(r -> {
+                                if (r.getCheckInTime() == null) return false;
+                                // Coi là muộn nếu check-in sau 8:30
+                                return r.getCheckInTime().toLocalTime().isAfter(java.time.LocalTime.of(8, 30));
+                            })
+                            .count();
+
+                    long absentDays = records.stream()
+                            .filter(r -> "absent".equals(r.getStatus()))
+                            .count();
+
+                    // Lấy department - xử lý nếu không có field department trong InternProfile
+                    String deptName = "Chưa phân công"; // Default value
+                    // TODO: Nếu InternProfile có field department, uncomment dòng dưới:
+                    // deptName = intern.getDepartment() != null ? intern.getDepartment() : "Chưa phân công";
+
+                    return AttendanceReportDTO.builder()
+                            .internId(internId)
+                            .internName(intern.getUser().getFullName())
+                            .employeeId("TTS" + internId)
+                            .department(deptName)
+                            .totalWorkingDays(workingDays)
+                            .totalLeaveDays(0L) // Chưa implement leave days tracking
+                            .totalLateDays(lateDays)
+                            .totalAbsentDays(absentDays)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // Filter theo department nếu có
+        if (department != null && !department.isEmpty()) {
+            reportList = reportList.stream()
+                    .filter(dto -> department.equals(dto.getDepartment()))
+                    .collect(Collectors.toList());
+        }
+
+        // Filter theo search text nếu có
+        if (search != null && !search.isEmpty()) {
+            String searchLower = search.toLowerCase();
+            reportList = reportList.stream()
+                    .filter(dto -> 
+                            dto.getInternName().toLowerCase().contains(searchLower) ||
+                            dto.getEmployeeId().toLowerCase().contains(searchLower))
+                    .collect(Collectors.toList());
+        }
+
+        return reportList;
     }
 
     // ✅ Helper: Convert entity to DTO
