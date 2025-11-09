@@ -1,6 +1,8 @@
 package com.example.be.repository;
 
 import com.example.be.entity.AttendanceRecord;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,12 +12,18 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AttendanceRecordRepository extends JpaRepository<AttendanceRecord, Long> {
+    
     @Query("SELECT ar FROM AttendanceRecord ar WHERE ar.intern.id = :internId AND ar.workDate = :date")
-    Optional<AttendanceRecord> findByInternIdAndWorkDate(@Param("internId") Long internId, @Param("date") LocalDate date);
+    Optional<AttendanceRecord> findByInternIdAndWorkDate(
+            @Param("internId") Long internId, 
+            @Param("date") LocalDate date
+    );
 
     List<AttendanceRecord> findAllByWorkDate(LocalDate date);
 
     List<AttendanceRecord> findByInternId(Long internId);
+    
+    // Method cho phân trang và sắp xếp theo ngày giảm dần
+    @Query("SELECT ar FROM AttendanceRecord ar WHERE ar.intern.id = :internId ORDER BY ar.workDate DESC")
+    Page<AttendanceRecord> findByInternIdOrderByWorkDateDesc(@Param("internId") Long internId, Pageable pageable);
 }
-
-

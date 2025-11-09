@@ -27,13 +27,19 @@ public class SecurityConfig {
         http
                 .securityMatcher("/api/**") // RẤT QUAN TRỌNG
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {})
+                .cors(cors -> {}) // Sử dụng corsFilter bean
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll() // Cho phép toàn bộ /api/**
                 )
-                .oauth2Login(oauth -> oauth.disable()) // Không dùng OAuth2
+                .oauth2Login(oauth -> oauth.disable()) // Không dùng OAuth2 cho API
                 .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable());
+                .httpBasic(basic -> basic.disable())
+                // Thêm session management để tránh tạo session không cần thiết
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(
+                            org.springframework.security.config.http.SessionCreationPolicy.STATELESS
+                        )
+                );
 
         return http.build();
     }
@@ -44,12 +50,14 @@ public class SecurityConfig {
     public SecurityFilterChain webSecurity(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .cors(cors -> {}) // Sử dụng corsFilter bean
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/oauth2/**",
                                 "/oauth2/authorization/**",
                                 "/login/oauth2/**",
-                                "/login/**"
+                                "/login/**",
+                                "/error"  // Thêm error endpoint
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -58,10 +66,13 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)
+                        .failureUrl("http://localhost:5173/login?error=true") // Thêm failure handler
                 );
 
         // Cho phép H2 console chạy trong frame
-        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
+        http.headers(headers -> headers
+                .frameOptions(frame -> frame.disable())
+        );
 
         return http.build();
     }
@@ -70,10 +81,29 @@ public class SecurityConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
+        
+        // Cho phép credentials (cookies, authorization headers)
         config.setAllowCredentials(true);
+        
+        // Cho phép origins
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        
+        // Cho phép tất cả methods
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        
+        // Cho phép tất cả headers
         config.setAllowedHeaders(List.of("*"));
+        
+        // Expose headers cho client
+        config.setExposedHeaders(List.of(
+            "Authorization",
+            "Content-Type",
+            "X-Total-Count",
+            "X-Auth-Token"
+        ));
+        
+        // Cache preflight request trong 1 giờ
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
