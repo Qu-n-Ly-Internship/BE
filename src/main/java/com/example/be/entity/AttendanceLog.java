@@ -2,9 +2,7 @@ package com.example.be.entity;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import jakarta.persistence.*;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
@@ -15,6 +13,8 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @Table(name = "attendance_logs")
+@NoArgsConstructor
+@AllArgsConstructor
 public class AttendanceLog {
 
     @Id
@@ -30,9 +30,10 @@ public class AttendanceLog {
     private EventType eventType; // SCAN, CHECKIN, CHECKOUT, FAILED_SIG, EXPIRED
 
     @Column(name = "event_time")
-    private LocalDateTime eventTime = LocalDateTime.now();
+    private LocalDateTime eventTime ;
 
     @Lob
+    @Column(columnDefinition = "TEXT")
     private String payload;
 
     @Column(length = 128)
@@ -45,7 +46,15 @@ public class AttendanceLog {
     private String userAgent;
 
     @Lob
+    @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @PrePersist
+    public void prePersist() {
+        if (eventTime == null) {
+            eventTime = LocalDateTime.now();
+        }
+    }
 
     public enum EventType {
         SCAN, CHECKIN, CHECKOUT, FAILED_SIG, EXPIRED
