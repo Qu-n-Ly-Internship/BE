@@ -1,5 +1,9 @@
 package com.example.be.controller;
 
+import com.example.be.dto.AttendanceHistoryDTO;
+import com.example.be.dto.AttendanceRecordDTO;
+import com.example.be.dto.AttendanceReportDTO;
+import com.example.be.dto.ResponseWrapper;
 import com.example.be.entity.AttendanceRecord;
 import com.example.be.service.Attendance.AttendanceService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +21,7 @@ public class AttendanceController {
 
     private final AttendanceService attendanceService;
 
-    // 1️⃣ API tạo QR code cho buổi làm việc (ví dụ HR hoặc hệ thống gọi)
+    // 1️⃣ API tạo QR code cho buổi làm việc
     @GetMapping("/generate")
     public ResponseEntity<String> generateQrCode(@RequestParam String code) {
         String qrUrl = attendanceService.generateQrCode(code);
@@ -45,11 +49,83 @@ public class AttendanceController {
         return ResponseEntity.ok(records);
     }
 
+    // 4️⃣ API lấy records của thực tập sinh hiện tại
     @GetMapping("/records/my")
     public ResponseEntity<List<AttendanceRecord>> getMyAttendanceRecords(
             @RequestParam Long userId
     ) {
         List<AttendanceRecord> records = attendanceService.getRecordsForCurrentIntern(userId);
         return ResponseEntity.ok(records);
+    }
+
+    // 5️⃣ API Check-in thủ công
+    @PostMapping("/check-in")
+    public ResponseEntity<ResponseWrapper<AttendanceRecordDTO>> checkIn(
+            @RequestBody CheckInOutRequest request
+    ) {
+        try {
+            AttendanceRecordDTO record = attendanceService.checkIn(request.getUserId());
+            return ResponseEntity.ok(ResponseWrapper.success(record, "Check-in thành công"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ResponseWrapper.error(e.getMessage()));
+        }
+    }
+
+    // 6️⃣ API Check-out thủ công
+    @PostMapping("/check-out")
+    public ResponseEntity<ResponseWrapper<AttendanceRecordDTO>> checkOut(
+            @RequestBody CheckInOutRequest request
+    ) {
+        try {
+            AttendanceRecordDTO record = attendanceService.checkOut(request.getUserId());
+            return ResponseEntity.ok(ResponseWrapper.success(record, "Check-out thành công"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ResponseWrapper.error(e.getMessage()));
+        }
+    }
+
+    // 7️⃣ API lấy thông tin chấm công hôm nay
+    @GetMapping("/today")
+    public ResponseEntity<ResponseWrapper<AttendanceRecordDTO>> getTodayAttendance(
+            @RequestParam Long userId,
+            @RequestParam String date
+    ) {
+        LocalDate queryDate = LocalDate.parse(date);
+        AttendanceRecordDTO record = attendanceService.getTodayAttendance(userId, queryDate);
+        return ResponseEntity.ok(ResponseWrapper.success(record, "Lấy thông tin thành công"));
+    }
+
+    // 8️⃣ API lấy lịch sử chấm công (có phân trang)
+    @GetMapping("/history")
+    public ResponseEntity<ResponseWrapper<List<AttendanceRecordDTO>>> getAttendanceHistory(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        AttendanceHistoryDTO history = attendanceService.getAttendanceHistory(userId, page, size);
+        return ResponseEntity.ok(ResponseWrapper.success(history.getData(), "Lấy lịch sử thành công"));
+    }
+
+    // 9️⃣ API lấy báo cáo chuyên cần (cho HR/Admin)
+    @GetMapping("/report")
+    public ResponseEntity<ResponseWrapper<List<AttendanceReportDTO>>> getAttendanceReport(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) Long mentorId,
+            @RequestParam(required = false) String search
+    ) {
+        List<AttendanceReportDTO> report = attendanceService.getAttendanceReport(
+                startDate, endDate, department, mentorId, search
+        );
+        return ResponseEntity.ok(ResponseWrapper.success(report, "Lấy báo cáo thành công"));
+    }
+
+    // DTO cho request check-in/check-out
+    @lombok.Data
+    public static class CheckInOutRequest {
+        private Long userId;
     }
 }

@@ -1,12 +1,18 @@
 package com.example.be.service.Attendance;
 
-
+import com.example.be.dto.AttendanceHistoryDTO;
+import com.example.be.dto.AttendanceRecordDTO;
+import com.example.be.dto.AttendanceReportDTO;
 import com.example.be.entity.AttendanceLog;
 import com.example.be.entity.AttendanceRecord;
 import com.example.be.entity.InternProfile;
 import com.example.be.repository.*;
 import com.example.be.service.InternContextService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -16,12 +22,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
 
-    private static AttendanceService HmacUtil;
     private final AttendanceRecordRepository recordRepo;
     private final AttendanceLogRepository logRepo;
     private final InternContextService internContextService;
@@ -50,7 +57,6 @@ public class AttendanceService {
 
     // ✅ 2. Xử lý quét QR → check-in / check-out
     public String processQrScan(Long userId, String code, String sig) {
-        // ✅ 1. Từ userId -> internId
         Long internId = internContextService.getInternIdFromUserId(userId);
         if (internId == null) {
             throw new IllegalArgumentException("User này không có hồ sơ thực tập sinh!");
@@ -58,11 +64,7 @@ public class AttendanceService {
         InternProfile intern = internRepository.findById(internId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy intern với id: " + internId));
 
-
-        // ✅ 2. Xác minh chữ ký QR
         String expectedSig = hmacSha256(code, SECRET_KEY);
-
-
         if (!expectedSig.equals(sig)) {
             logRepo.save(AttendanceLog.builder()
                     .intern(intern)
@@ -73,14 +75,10 @@ public class AttendanceService {
             throw new IllegalArgumentException("Invalid QR signature!");
         }
 
-        // ✅ 3. Lấy hoặc tạo record
         LocalDate today = LocalDate.now();
         AttendanceRecord record = recordRepo.findByInternIdAndWorkDate(internId, today).orElse(null);
 
-
-        // ✅ 4. Check-in hoặc Check-out
         if (record == null) {
-            // --- Check-in ---
             record = new AttendanceRecord();
             record.setIntern(intern);
             record.setWorkDate(today);
@@ -97,7 +95,6 @@ public class AttendanceService {
                     .build());
             return "✅ Checked in successfully";
         } else if (record.getCheckOutTime() == null) {
-            // --- Check-out ---
             record.setCheckOutTime(LocalDateTime.now());
             recordRepo.save(record);
 
@@ -109,7 +106,6 @@ public class AttendanceService {
                     .build());
             return "✅ Checked out successfully";
         } else {
-            // --- Đã checkout ---
             logRepo.save(AttendanceLog.builder()
                     .intern(intern)
                     .eventType(AttendanceLog.EventType.EXPIRED)
@@ -126,6 +122,7 @@ public class AttendanceService {
         return recordRepo.findAllByWorkDate(date);
     }
 
+    // ✅ 4. Lấy records của thực tập sinh hiện tại
     public List<AttendanceRecord> getRecordsForCurrentIntern(Long userId) {
         Long internId = internContextService.getInternIdFromUserId(userId);
         if (internId == null) {
@@ -134,5 +131,200 @@ public class AttendanceService {
         return recordRepo.findByInternId(internId);
     }
 
+    // ✅ 5. Check-in thủ công
+    public AttendanceRecordDTO checkIn(Long userId) {
+        Long internId = internContextService.getInternIdFromUserId(userId);
+        if (internId == null) {
+            throw new IllegalArgumentException("User này không có hồ sơ thực tập sinh!");
+        }
+        
+        InternProfile intern = internRepository.findById(internId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy intern với id: " + internId));
 
+        LocalDate today = LocalDate.now();
+        
+        // Kiểm tra đã check-in chưa
+        AttendanceRecord existingRecord = recordRepo.findByInternIdAndWorkDate(internId, today).orElse(null);
+        if (existingRecord != null) {
+            throw new IllegalArgumentException("Bạn đã check-in hôm nay rồi!");
+        }
+
+        // Tạo record mới
+        AttendanceRecord record = new AttendanceRecord();
+        record.setIntern(intern);
+        record.setWorkDate(today);
+        record.setCheckInTime(LocalDateTime.now());
+        record.setMethod("MANUAL");
+        record.setStatus("present");
+        record = recordRepo.save(record);
+
+        // Log event
+        logRepo.save(AttendanceLog.builder()
+                .intern(intern)
+                .eventType(AttendanceLog.EventType.CHECKIN)
+                .payload("Manual check-in")
+                .build());
+
+        return convertToDTO(record);
+    }
+
+    // ✅ 6. Check-out thủ công
+    public AttendanceRecordDTO checkOut(Long userId) {
+        Long internId = internContextService.getInternIdFromUserId(userId);
+        if (internId == null) {
+            throw new IllegalArgumentException("User này không có hồ sơ thực tập sinh!");
+        }
+        
+        InternProfile intern = internRepository.findById(internId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy intern với id: " + internId));
+
+        LocalDate today = LocalDate.now();
+        
+        // Tìm record hôm nay
+        AttendanceRecord record = recordRepo.findByInternIdAndWorkDate(internId, today)
+                .orElseThrow(() -> new IllegalArgumentException("Bạn chưa check-in hôm nay!"));
+
+        // Kiểm tra đã check-out chưa
+        if (record.getCheckOutTime() != null) {
+            throw new IllegalArgumentException("Bạn đã check-out hôm nay rồi!");
+        }
+
+        // Update check-out time
+        record.setCheckOutTime(LocalDateTime.now());
+        record = recordRepo.save(record);
+
+        // Log event
+        logRepo.save(AttendanceLog.builder()
+                .intern(intern)
+                .eventType(AttendanceLog.EventType.CHECKOUT)
+                .payload("Manual check-out")
+                .build());
+
+        return convertToDTO(record);
+    }
+
+    // ✅ 7. Lấy thông tin chấm công hôm nay
+    public AttendanceRecordDTO getTodayAttendance(Long userId, LocalDate date) {
+        Long internId = internContextService.getInternIdFromUserId(userId);
+        if (internId == null) {
+            throw new IllegalArgumentException("User này không có hồ sơ thực tập sinh!");
+        }
+
+        AttendanceRecord record = recordRepo.findByInternIdAndWorkDate(internId, date).orElse(null);
+        return record != null ? convertToDTO(record) : null;
+    }
+
+    // ✅ 8. Lấy lịch sử chấm công với phân trang
+    public AttendanceHistoryDTO getAttendanceHistory(Long userId, int page, int size) {
+        Long internId = internContextService.getInternIdFromUserId(userId);
+        if (internId == null) {
+            throw new IllegalArgumentException("User này không có hồ sơ thực tập sinh!");
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "workDate"));
+        Page<AttendanceRecord> recordPage = recordRepo.findByInternIdOrderByWorkDateDesc(internId, pageable);
+
+        List<AttendanceRecordDTO> records = recordPage.getContent().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+
+        AttendanceHistoryDTO historyDTO = new AttendanceHistoryDTO();
+        historyDTO.setData(records);
+        historyDTO.setTotalElements(recordPage.getTotalElements());
+        historyDTO.setTotalPages(recordPage.getTotalPages());
+        historyDTO.setCurrentPage(recordPage.getNumber());
+        
+        return historyDTO;
+    }
+
+    // ✅ 9. Lấy báo cáo chuyên cần (cho HR/Admin)
+    public List<AttendanceReportDTO> getAttendanceReport(
+            String startDate, 
+            String endDate, 
+            String department, 
+            Long mentorId, 
+            String search
+    ) {
+        LocalDate start = (startDate != null) ? LocalDate.parse(startDate) : LocalDate.now().withDayOfMonth(1);
+        LocalDate end = (endDate != null) ? LocalDate.parse(endDate) : LocalDate.now();
+
+        // Lấy tất cả records trong khoảng thời gian
+        List<AttendanceRecord> allRecords = recordRepo.findAllByWorkDateBetween(start, end);
+
+        // Group by intern và tính toán thống kê
+        Map<Long, List<AttendanceRecord>> groupedByIntern = allRecords.stream()
+                .collect(Collectors.groupingBy(record -> record.getIntern().getId()));
+
+        List<AttendanceReportDTO> reportList = groupedByIntern.entrySet().stream()
+                .map(entry -> {
+                    Long internId = entry.getKey();
+                    List<AttendanceRecord> records = entry.getValue();
+                    InternProfile intern = records.get(0).getIntern();
+
+                    // Tính toán các chỉ số
+                    long workingDays = records.stream()
+                            .filter(r -> r.getCheckInTime() != null)
+                            .count();
+
+                    long lateDays = records.stream()
+                            .filter(r -> {
+                                if (r.getCheckInTime() == null) return false;
+                                // Coi là muộn nếu check-in sau 8:30
+                                return r.getCheckInTime().toLocalTime().isAfter(java.time.LocalTime.of(8, 30));
+                            })
+                            .count();
+
+                    long absentDays = records.stream()
+                            .filter(r -> "absent".equals(r.getStatus()))
+                            .count();
+
+                    // Lấy department - xử lý nếu không có field department trong InternProfile
+                    String deptName = "Chưa phân công"; // Default value
+                    // TODO: Nếu InternProfile có field department, uncomment dòng dưới:
+                    // deptName = intern.getDepartment() != null ? intern.getDepartment() : "Chưa phân công";
+
+                    return AttendanceReportDTO.builder()
+                            .internId(internId)
+                            .internName(intern.getUser().getFullName())
+                            .employeeId("TTS" + internId)
+                            .department(deptName)
+                            .totalWorkingDays(workingDays)
+                            .totalLeaveDays(0L) // Chưa implement leave days tracking
+                            .totalLateDays(lateDays)
+                            .totalAbsentDays(absentDays)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // Filter theo department nếu có
+        if (department != null && !department.isEmpty()) {
+            reportList = reportList.stream()
+                    .filter(dto -> department.equals(dto.getDepartment()))
+                    .collect(Collectors.toList());
+        }
+
+        // Filter theo search text nếu có
+        if (search != null && !search.isEmpty()) {
+            String searchLower = search.toLowerCase();
+            reportList = reportList.stream()
+                    .filter(dto -> 
+                            dto.getInternName().toLowerCase().contains(searchLower) ||
+                            dto.getEmployeeId().toLowerCase().contains(searchLower))
+                    .collect(Collectors.toList());
+        }
+
+        return reportList;
+    }
+
+    // ✅ Helper: Convert entity to DTO
+    private AttendanceRecordDTO convertToDTO(AttendanceRecord record) {
+        AttendanceRecordDTO dto = new AttendanceRecordDTO();
+        dto.setId(record.getId());
+        dto.setDate(record.getWorkDate());
+        dto.setCheckInTime(record.getCheckInTime());
+        dto.setCheckOutTime(record.getCheckOutTime());
+        dto.setMethod(record.getMethod());
+        dto.setStatus(record.getStatus());
+        return dto;
+    }
 }
