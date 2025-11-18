@@ -24,6 +24,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -133,74 +134,129 @@ public class AttendanceService {
 
     // ✅ 5. Check-in thủ công
     public AttendanceRecordDTO checkIn(Long userId) {
-        Long internId = internContextService.getInternIdFromUserId(userId);
-        if (internId == null) {
-            throw new IllegalArgumentException("User này không có hồ sơ thực tập sinh!");
+        try {
+            System.out.println("=== CHECK-IN START ===");
+            System.out.println("User ID: " + userId);
+            
+            Long internId = internContextService.getInternIdFromUserId(userId);
+            System.out.println("Intern ID: " + internId);
+            
+            if (internId == null) {
+                throw new IllegalArgumentException("User này không có hồ sơ thực tập sinh!");
+            }
+            
+            InternProfile intern = internRepository.findById(internId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy intern với id: " + internId));
+            System.out.println("Intern found: " + intern.getId());
+
+            LocalDate today = LocalDate.now();
+            System.out.println("Today: " + today);
+            
+            // Kiểm tra đã check-in chưa
+            Optional<AttendanceRecord> existingRecord = recordRepo.findByInternIdAndWorkDate(internId, today);
+            if (existingRecord.isPresent()) {
+                System.out.println("Already checked in!");
+                throw new IllegalArgumentException("Bạn đã check-in hôm nay rồi!");
+            }
+
+            // Tạo record mới
+            AttendanceRecord record = new AttendanceRecord();
+            record.setIntern(intern);
+            record.setWorkDate(today);
+            record.setCheckInTime(LocalDateTime.now());
+            record.setMethod("MANUAL");
+            record.setStatus("present");
+            
+            System.out.println("Saving record...");
+            record = recordRepo.save(record);
+            System.out.println("Record saved: " + record.getId());
+
+            // Log event - Tạo object thủ công thay vì dùng Builder
+            try {
+                AttendanceLog log = new AttendanceLog();
+                log.setIntern(intern);
+                log.setEventType(AttendanceLog.EventType.CHECKIN);
+                log.setEventTime(LocalDateTime.now());
+                log.setPayload("Manual check-in");
+                
+                logRepo.save(log);
+                System.out.println("Log saved");
+            } catch (Exception e) {
+                System.err.println("Failed to save log: " + e.getMessage());
+                e.printStackTrace();
+                // Continue even if log fails
+            }
+
+            System.out.println("=== CHECK-IN SUCCESS ===");
+            return convertToDTO(record);
+        } catch (Exception e) {
+            System.err.println("=== CHECK-IN ERROR ===");
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-        
-        InternProfile intern = internRepository.findById(internId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy intern với id: " + internId));
-
-        LocalDate today = LocalDate.now();
-        
-        // Kiểm tra đã check-in chưa
-        AttendanceRecord existingRecord = recordRepo.findByInternIdAndWorkDate(internId, today).orElse(null);
-        if (existingRecord != null) {
-            throw new IllegalArgumentException("Bạn đã check-in hôm nay rồi!");
-        }
-
-        // Tạo record mới
-        AttendanceRecord record = new AttendanceRecord();
-        record.setIntern(intern);
-        record.setWorkDate(today);
-        record.setCheckInTime(LocalDateTime.now());
-        record.setMethod("MANUAL");
-        record.setStatus("present");
-        record = recordRepo.save(record);
-
-        // Log event
-        logRepo.save(AttendanceLog.builder()
-                .intern(intern)
-                .eventType(AttendanceLog.EventType.CHECKIN)
-                .payload("Manual check-in")
-                .build());
-
-        return convertToDTO(record);
     }
 
     // ✅ 6. Check-out thủ công
     public AttendanceRecordDTO checkOut(Long userId) {
-        Long internId = internContextService.getInternIdFromUserId(userId);
-        if (internId == null) {
-            throw new IllegalArgumentException("User này không có hồ sơ thực tập sinh!");
+        try {
+            System.out.println("=== CHECK-OUT START ===");
+            System.out.println("User ID: " + userId);
+            
+            Long internId = internContextService.getInternIdFromUserId(userId);
+            System.out.println("Intern ID: " + internId);
+            
+            if (internId == null) {
+                throw new IllegalArgumentException("User này không có hồ sơ thực tập sinh!");
+            }
+            
+            InternProfile intern = internRepository.findById(internId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy intern với id: " + internId));
+            System.out.println("Intern found: " + intern.getId());
+
+            LocalDate today = LocalDate.now();
+            System.out.println("Today: " + today);
+            
+            // Tìm record hôm nay
+            AttendanceRecord record = recordRepo.findByInternIdAndWorkDate(internId, today)
+                    .orElseThrow(() -> new IllegalArgumentException("Bạn chưa check-in hôm nay!"));
+
+            // Kiểm tra đã check-out chưa
+            if (record.getCheckOutTime() != null) {
+                System.out.println("Already checked out!");
+                throw new IllegalArgumentException("Bạn đã check-out hôm nay rồi!");
+            }
+
+            // Update check-out time
+            record.setCheckOutTime(LocalDateTime.now());
+            System.out.println("Updating record...");
+            record = recordRepo.save(record);
+            System.out.println("Record updated: " + record.getId());
+
+            // Log event - Tạo object thủ công
+            try {
+                AttendanceLog log = new AttendanceLog();
+                log.setIntern(intern);
+                log.setEventType(AttendanceLog.EventType.CHECKOUT);
+                log.setEventTime(LocalDateTime.now());
+                log.setPayload("Manual check-out");
+                
+                logRepo.save(log);
+                System.out.println("Log saved");
+            } catch (Exception e) {
+                System.err.println("Failed to save log: " + e.getMessage());
+                e.printStackTrace();
+                // Continue even if log fails
+            }
+
+            System.out.println("=== CHECK-OUT SUCCESS ===");
+            return convertToDTO(record);
+        } catch (Exception e) {
+            System.err.println("=== CHECK-OUT ERROR ===");
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-        
-        InternProfile intern = internRepository.findById(internId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy intern với id: " + internId));
-
-        LocalDate today = LocalDate.now();
-        
-        // Tìm record hôm nay
-        AttendanceRecord record = recordRepo.findByInternIdAndWorkDate(internId, today)
-                .orElseThrow(() -> new IllegalArgumentException("Bạn chưa check-in hôm nay!"));
-
-        // Kiểm tra đã check-out chưa
-        if (record.getCheckOutTime() != null) {
-            throw new IllegalArgumentException("Bạn đã check-out hôm nay rồi!");
-        }
-
-        // Update check-out time
-        record.setCheckOutTime(LocalDateTime.now());
-        record = recordRepo.save(record);
-
-        // Log event
-        logRepo.save(AttendanceLog.builder()
-                .intern(intern)
-                .eventType(AttendanceLog.EventType.CHECKOUT)
-                .payload("Manual check-out")
-                .build());
-
-        return convertToDTO(record);
     }
 
     // ✅ 7. Lấy thông tin chấm công hôm nay
