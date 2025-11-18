@@ -109,6 +109,7 @@ public class AdminService {
                 intern.setUser(savedUser);
                 intern.setFullName(savedUser.getFullName());
                 intern.setEmail(savedUser.getEmail());
+                intern.setStatus("active");
                 internProfileRepository.save(intern);
             }
             default -> {
