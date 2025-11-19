@@ -19,7 +19,7 @@ public class TaskService {
     private final InternRepository internRepository;
     private final InternScheduleRepository scheduleRepository;
     private final InternProfileRepository internProfileRepository;
-    private final MentorRepository mentorRepository; // ✅ Thêm MentorRepository
+    private final MentorRepository mentorRepository;
     private final JdbcTemplate jdbcTemplate;
     private final NotificationPublisher notificationPublisher;
 
@@ -62,7 +62,6 @@ public class TaskService {
 
             List<Map<String, Object>> tasks = jdbcTemplate.queryForList(sql, internId);
 
-            // Chuyển đổi key từ snake_case sang camelCase
             List<Map<String, Object>> formattedTasks = new ArrayList<>();
             for (Map<String, Object> task : tasks) {
                 Map<String, Object> formattedTask = new HashMap<>();
@@ -75,7 +74,7 @@ public class TaskService {
                 formattedTask.put("dueDate", task.get("due_date"));
                 formattedTask.put("assignedTo", task.get("assigned_to"));
                 formattedTask.put("assignedBy", task.get("assigned_by"));
-                formattedTask.put("mentorName", task.get("mentor_name")); // ✅ Thêm tên mentor
+                formattedTask.put("mentorName", task.get("mentor_name"));
                 formattedTasks.add(formattedTask);
             }
 
@@ -123,7 +122,6 @@ public class TaskService {
 
             List<Map<String, Object>> schedule = jdbcTemplate.queryForList(sql, internId);
 
-            // Chuyển đổi format cho frontend
             List<Map<String, Object>> formattedSchedule = new ArrayList<>();
             for (Map<String, Object> item : schedule) {
                 Map<String, Object> formatted = new HashMap<>();
@@ -135,7 +133,7 @@ public class TaskService {
                 formatted.put("startDate", item.get("start_date"));
                 formatted.put("endDate", item.get("end_date"));
                 formatted.put("internName", item.get("intern_name"));
-                formatted.put("mentorName", item.get("mentor_name")); // ✅ Thêm tên mentor
+                formatted.put("mentorName", item.get("mentor_name"));
                 formatted.put("department", item.get("department"));
                 formattedSchedule.add(formatted);
             }
@@ -150,7 +148,6 @@ public class TaskService {
     // ✅ Lấy danh sách tasks đã giao (cho mentor)
     public Map<String, Object> getAssignedTasks(Long mentorUserId) {
         try {
-            // ✅ Tìm mentor_id từ user_id
             Mentors mentor = mentorRepository.findByUser_Id(mentorUserId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin mentor"));
 
@@ -175,7 +172,6 @@ public class TaskService {
 
             List<Map<String, Object>> tasks = jdbcTemplate.queryForList(sql, mentor.getId());
 
-            // Format cho frontend
             List<Map<String, Object>> formattedTasks = new ArrayList<>();
             for (Map<String, Object> task : tasks) {
                 Map<String, Object> formatted = new HashMap<>();
@@ -188,7 +184,7 @@ public class TaskService {
                 formatted.put("duedate", task.get("due_date"));
                 formatted.put("internName", task.get("intern_name"));
                 formatted.put("internEmail", task.get("intern_email"));
-                formatted.put("mentorName", task.get("assigned_by_name")); // ✅ Tên mentor đã giao
+                formatted.put("mentorName", task.get("assigned_by_name"));
                 formattedTasks.add(formatted);
             }
 
@@ -199,7 +195,24 @@ public class TaskService {
         }
     }
 
-    // ✅ Giao công việc mới
+    // ✅ Kiểm tra mentor có quyền giao task cho intern không
+    private boolean canMentorAssignToIntern(Long mentorId, Long internId) {
+        String sql = """
+                SELECT COUNT(*) > 0 as can_assign
+                FROM intern_profiles ip
+                INNER JOIN intern_programs prog ON ip.program_id = prog.program_id
+                WHERE ip.intern_id = ? AND prog.mentor_id = ?
+                """;
+
+        try {
+            Boolean canAssign = jdbcTemplate.queryForObject(sql, Boolean.class, internId, mentorId);
+            return canAssign != null && canAssign;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // ✅ Giao công việc mới (với kiểm tra quyền)
     public Map<String, Object> assignTask(Map<String, Object> req) {
         try {
             Long internId = Long.valueOf(req.get("internId").toString());
@@ -216,6 +229,14 @@ public class TaskService {
             // ✅ Lấy mentor theo user_id
             Mentors mentor = mentorRepository.findByUser_Id(mentorUserId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin mentor với user_id: " + mentorUserId));
+
+            // ✅ KIỂM TRA QUYỀN: Mentor chỉ được giao task cho intern thuộc program mình quản lý
+            if (!canMentorAssignToIntern(mentor.getId(), internId)) {
+                return Map.of(
+                        "success", false,
+                        "message", "Bạn không có quyền giao task cho thực tập sinh này. Thực tập sinh không thuộc program bạn quản lý."
+                );
+            }
 
             // ✅ Tạo task
             Task task = Task.builder()
@@ -239,15 +260,16 @@ public class TaskService {
                         .task(task)
                         .date(task.getDueDate())
                         .status("PLANNED")
-                        .title(task.getTitle()) // ⚠️ FIX QUAN TRỌNG: tránh lỗi "Column 'title' cannot be null"
+                        .title(task.getTitle())
                         .description(task.getDescription())
                         .note("Thực hiện công việc: " + task.getTitle())
                         .build();
 
                 scheduleRepository.save(schedule);
             }
+
+            // ✅ Gửi notification
             try {
-                // Lấy userId của intern để gửi notification
                 Long internUserId = intern.getUser() != null ? intern.getUser().getId() : null;
 
                 if (internUserId != null) {
@@ -261,25 +283,25 @@ public class TaskService {
                             .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
 
                     notificationPublisher.publish(
-                            internUserId.toString(),                    // userId
-                            "NEW_TASK",                                 // type
-                            "📋 Task mới từ " + mentor.getFullName(),  // title
+                            internUserId.toString(),
+                            "NEW_TASK",
+                            "📋 Task mới từ " + mentor.getFullName(),
                             String.format(
                                     "%s %s - Deadline: %s\n%s",
                                     priorityEmoji,
                                     title,
                                     deadlineStr,
                                     description != null ? description : ""
-                            )                                           // message
+                            )
                     );
 
                     System.out.println("✅ Notification sent to intern userId: " + internUserId);
                 }
             } catch (Exception e) {
-                // Không throw exception để không ảnh hưởng việc tạo task
                 System.err.println("❌ Failed to send notification: " + e.getMessage());
                 e.printStackTrace();
             }
+
             return Map.of(
                     "success", true,
                     "message", "Giao việc thành công",
@@ -296,16 +318,15 @@ public class TaskService {
         }
     }
 
-
     // Cập nhật trạng thái công việc
     public Map<String, Object> updateTaskStatus(Long taskId, String newStatus) {
-
         try {
             Task task = taskRepository.findById(taskId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy task"));
             String oldStatus = task.getStatus();
             task.setStatus(newStatus);
             taskRepository.save(task);
+
             // Cập nhật lịch tương ứng (nếu có)
             try {
                 scheduleRepository.findAll().stream()
@@ -315,9 +336,9 @@ public class TaskService {
                             scheduleRepository.save(s);
                         });
             } catch (Exception e) {
-                // Bỏ qua lỗi nếu không có schedule
                 System.out.println("No schedule to update: " + e.getMessage());
             }
+
             Mentors mentor = task.getAssignedBy();
             Long mentorUserId = mentor.getUser() != null ? mentor.getUser().getId() : null;
 
@@ -347,6 +368,7 @@ public class TaskService {
                         )
                 );
             }
+
             return Map.of("success", true, "message", "Cập nhật trạng thái thành công");
         } catch (Exception e) {
             e.printStackTrace();
