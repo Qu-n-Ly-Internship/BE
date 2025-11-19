@@ -163,7 +163,12 @@ public class ProjectService {
         InternProfile intern = internProfileRepository.findById(internId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy intern với id = " + internId));
 
-        // Gán project cho intern
+        // 🚫 Kiểm tra nếu intern đã thuộc project nào đó
+        if (intern.getProgram() != null) {
+            throw new RuntimeException("Intern này đã thuộc project khác, không thể thêm mới!");
+        }
+
+        // ✅ Gán project cho intern
         intern.setProgram(project);
         internProfileRepository.save(intern);
 
@@ -184,6 +189,7 @@ public class ProjectService {
                 .internNames(interns)
                 .build();
     }
+
 
 
     // ✅ HR chuyển intern sang project khác
