@@ -1,10 +1,12 @@
 package com.example.be.service;
 
+import com.example.be.dto.InternResponse;
 import com.example.be.dto.InternRequest;
 import com.example.be.dto.ProjectRequest;
 import com.example.be.entity.InternProfile;
 import com.example.be.entity.Mentors;
 import com.example.be.entity.Project;
+import com.example.be.notification.service.NotificationPublisher;
 import com.example.be.repository.InternProfileRepository;
 import com.example.be.repository.MentorRepository;
 import com.example.be.repository.ProjectRepository;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
@@ -21,17 +24,18 @@ public class ProjectService {
     private final InternProfileRepository internProfileRepository;
     private final HrContextService hrContextService;
     private final MentorContextService mentorContextService;
-
+    private final NotificationPublisher notificationPublisher;
     public ProjectService(ProjectRepository projectRepository,
                           MentorRepository mentorRepository,
                           InternProfileRepository internProfileRepository,
                           HrContextService hrContextService,
-                          MentorContextService mentorContextService) {
+                          MentorContextService mentorContextService, NotificationPublisher notificationPublisher) {
         this.projectRepository = projectRepository;
         this.mentorRepository = mentorRepository;
         this.internProfileRepository = internProfileRepository;
         this.hrContextService = hrContextService;
         this.mentorContextService = mentorContextService;
+        this.notificationPublisher = notificationPublisher;
     }
 
     // ✅ Chuyển từ entity -> DTO
@@ -150,55 +154,55 @@ public class ProjectService {
     }
 
 
-    // ✅ HR thêm intern vào project
-    public ProjectRequest addInternToProject(Long projectId, Long internId, Long userId) {
-        Long hrId = hrContextService.getHrIdFromUserId(userId);
-        if (hrId == null) {
-            throw new RuntimeException("Bạn không có quyền thêm intern vào project!");
+        // ✅ HR thêm intern vào project
+        public ProjectRequest addInternToProject(Long projectId, Long internId) {
+
+
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy project với id = " + projectId));
+
+            InternProfile intern = internProfileRepository.findById(internId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy intern với id = " + internId));
+
+            // 🚫 Kiểm tra nếu intern đã thuộc project nào đó
+            if (intern.getProgram() != null) {
+                throw new RuntimeException("Intern này đã thuộc project khác, không thể thêm mới!");
+            }
+
+            // ✅ Gán project cho intern
+            intern.setProgram(project);
+            internProfileRepository.save(intern);
+
+            notificationPublisher.publish(
+                    intern.getUser().getId().toString(),
+                    "PROJECT",
+                    "Bạn đã được thêm vào dự án " + project.getTitle(),
+                    "Hãy kiểm tra chi tiết dự án của bạn."
+            );
+
+            List<InternRequest> interns = internProfileRepository.findByProgram_Id(projectId)
+                    .stream()
+                    .map(i -> InternRequest.builder()
+                            .id(i.getId())
+                            .fullName(i.getFullName())
+                            .build())
+                    .collect(Collectors.toList());
+
+            return ProjectRequest.builder()
+                    .id(project.getId())
+                    .title(project.getTitle())
+                    .description(project.getDescription())
+                    .mentorId(project.getMentor() != null ? project.getMentor().getId() : null)
+                    .mentorName(project.getMentor() != null ? project.getMentor().getUser().getFullName() : null)
+                    .internNames(interns)
+                    .build();
         }
-
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy project với id = " + projectId));
-
-        InternProfile intern = internProfileRepository.findById(internId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy intern với id = " + internId));
-
-        // 🚫 Kiểm tra nếu intern đã thuộc project nào đó
-        if (intern.getProgram() != null) {
-            throw new RuntimeException("Intern này đã thuộc project khác, không thể thêm mới!");
-        }
-
-        // ✅ Gán project cho intern
-        intern.setProgram(project);
-        internProfileRepository.save(intern);
-
-        List<InternRequest> interns = internProfileRepository.findByProgram_Id(projectId)
-                .stream()
-                .map(i -> InternRequest.builder()
-                        .id(i.getId())
-                        .fullName(i.getFullName())
-                        .build())
-                .collect(Collectors.toList());
-
-        return ProjectRequest.builder()
-                .id(project.getId())
-                .title(project.getTitle())
-                .description(project.getDescription())
-                .mentorId(project.getMentor() != null ? project.getMentor().getId() : null)
-                .mentorName(project.getMentor() != null ? project.getMentor().getUser().getFullName() : null)
-                .internNames(interns)
-                .build();
-    }
 
 
 
     // ✅ HR chuyển intern sang project khác
-    public InternProfile transferInternToAnotherProject(Long internId, Long newProjectId, Long userId) {
-        // 1️⃣ Xác thực HR
-        Long hrId = hrContextService.getHrIdFromUserId(userId);
-        if (hrId == null) {
-            throw new RuntimeException("Bạn không có quyền chuyển intern giữa các project!");
-        }
+    public InternResponse transferInternToAnotherProject(Long internId, Long newProjectId, Long userId) {
+
 
         // 2️⃣ Tìm intern
         InternProfile intern = internProfileRepository.findById(internId)
@@ -215,16 +219,18 @@ public class ProjectService {
 
         // 5️⃣ Cập nhật project mới
         intern.setProgram(newProject);
-        return internProfileRepository.save(intern);
+
+        notificationPublisher.publish(
+                intern.getUser().getId().toString(),
+                "PROJECT",
+                "Bạn đã được chuyển sang dự án " + newProject.getTitle(),
+                "Hãy kiểm tra công việc của bạn."
+        );
+        return toInternResponse(intern);
     }
 
     // ✅ HR xóa intern khỏi project
-    public InternProfile removeInternFromProject(Long internId, Long userId) {
-        // 1️⃣ Xác thực HR
-        Long hrId = hrContextService.getHrIdFromUserId(userId);
-        if (hrId == null) {
-            throw new RuntimeException("Bạn không có quyền xóa intern khỏi project!");
-        }
+    public InternResponse removeInternFromProject(Long internId, Long userId) {
 
         // 2️⃣ Tìm intern
         InternProfile intern = internProfileRepository.findById(internId)
@@ -237,7 +243,13 @@ public class ProjectService {
 
         // 4️⃣ Gỡ liên kết với project
         intern.setProgram(null);
-        return internProfileRepository.save(intern);
+        notificationPublisher.publish(
+                intern.getUser().getId().toString(),
+                "PROJECT",
+                "Bạn đã bị loại khỏi dự án ",
+                "Liên hệ HR nếu cần thêm thông tin."
+        );
+        return toInternResponse(intern);
     }
 
 
@@ -257,5 +269,15 @@ public class ProjectService {
         return projects.stream().map(this::toDto).collect(Collectors.toList());
     }
 
+    public InternResponse toInternResponse(InternProfile intern) {
+        return InternResponse.builder()
+                .id(intern.getId())
+                .fullName(intern.getFullName())
+                .email(intern.getUser() != null ? intern.getUser().getEmail() : null)
+                .projectId(intern.getProgram() != null ? intern.getProgram().getId() : null)
+                .status(intern.getStatus())
+                .build();
+    }
 
 }
+
