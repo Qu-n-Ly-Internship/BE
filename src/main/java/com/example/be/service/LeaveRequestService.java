@@ -4,6 +4,7 @@ import com.example.be.dto.*;
 import com.example.be.entity.LeaveRequest;
 import com.example.be.entity.InternProfile;
 import com.example.be.entity.User;
+import com.example.be.notification.service.NotificationPublisher;
 import com.example.be.repository.LeaveRequestRepository;
 import com.example.be.repository.InternProfileRepository;
 import com.example.be.repository.UserRepository;
@@ -24,6 +25,8 @@ public class LeaveRequestService {
     private final InternProfileRepository internProfileRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final NotificationPublisher notificationPublisher; // thêm vào constructor
+
 
     // ==================== INTERN APIs ====================
 
@@ -185,6 +188,14 @@ public class LeaveRequestService {
         request.setReviewedAt(LocalDateTime.now());
 
         LeaveRequest saved = leaveRequestRepository.save(request);
+        // Gửi notification tới intern
+        notificationPublisher.publish(
+                request.getIntern().getUser().getId().toString(), // userId nhận notification
+                "LEAVE_APPROVED", // type
+                "Leave request approved", // title
+                "Your leave request from " + request.getStartDate() + " to " + request.getEndDate()
+                        + " has been approved by " + hr.getFullName() // message
+        );
 
         // Gửi email thông báo
         sendApprovalEmail(saved);
@@ -220,6 +231,16 @@ public class LeaveRequestService {
         request.setRejectionReason(reviewRequest.getRejectionReason());
 
         LeaveRequest saved = leaveRequestRepository.save(request);
+
+        // Gửi notification tới intern
+        notificationPublisher.publish(
+                request.getIntern().getUser().getId().toString(),
+                "LEAVE_REJECTED",
+                "Leave request rejected",
+                "Your leave request from " + request.getStartDate() + " to " + request.getEndDate()
+                        + " has been rejected by " + hr.getFullName()
+                        + ". Reason: " + request.getRejectionReason()
+        );
 
         // Gửi email thông báo
         sendRejectionEmail(saved);
