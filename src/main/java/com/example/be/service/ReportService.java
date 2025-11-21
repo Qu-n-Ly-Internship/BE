@@ -2,6 +2,7 @@ package com.example.be.service;
 
 import com.example.be.dto.*;
 import com.example.be.entity.*;
+import com.example.be.notification.service.NotificationPublisher;
 import com.example.be.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class ReportService {
     private final HrRepository hrRepository;
     private final ReportRepository reportRepository;
     private final InternContextService internContextService;
+    private final NotificationPublisher notificationPublisher;
 
     public ReportService(EvaluationRepository evaluationRepository,
                          EvaluationScoreRepository evaluationScoreRepository,
@@ -32,7 +34,8 @@ public class ReportService {
                          MentorRepository mentorRepository,
                          HrRepository hrRepository,
                          ReportRepository reportRepository,
-                         InternContextService internContextService) {
+                         InternContextService internContextService,
+                         NotificationPublisher notificationPublisher) {
         this.evaluationRepository = evaluationRepository;
         this.evaluationScoreRepository = evaluationScoreRepository;
         this.mentorContextService = mentorContextService;
@@ -42,6 +45,7 @@ public class ReportService {
         this.hrRepository = hrRepository;
         this.reportRepository = reportRepository;
         this.internContextService = internContextService;
+        this.notificationPublisher = notificationPublisher;
     }
 
     // ============================================================
@@ -94,6 +98,13 @@ public class ReportService {
         evaluation.setCreatedAt(LocalDateTime.now());
 
         Evaluation savedEvaluation = evaluationRepository.save(evaluation);
+
+        notificationPublisher.publish(
+                intern.getId().toString(), // chỉ gửi cho intern
+                "MENTOR_EVALUATION",
+                "Bạn vừa bị đánh giá",
+                "Mentor " + mentor.getFullName() + " đã gửi đánh giá cho bạn. Evaluation ID: " + savedEvaluation.getEvaluationId()
+        );
 
         // Lưu các score
         if (request.getScores() != null && !request.getScores().isEmpty()) {
@@ -229,6 +240,14 @@ public class ReportService {
         report.setCreatedAt(LocalDateTime.now());
 
         Report saved = reportRepository.save(report);
+
+        notificationPublisher.publish(
+                intern.getId().toString(), // chỉ gửi cho intern
+                "REPORT_CREATED",
+                "Báo cáo mới đã được tạo",
+                "HR " + hr.getFullname() + " vừa tạo báo cáo về bạn. Report ID: " + saved.getReportId()
+        );
+
         return mapToResponse(saved);
     }
 

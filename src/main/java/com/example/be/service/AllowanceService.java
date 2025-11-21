@@ -2,6 +2,7 @@ package com.example.be.service;
 
 import com.example.be.entity.AllowancePayment;
 import com.example.be.entity.InternProfile;
+import com.example.be.notification.service.NotificationPublisher;
 import com.example.be.repository.AllowancePaymentRepository;
 import com.example.be.repository.InternProfileRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class AllowanceService {
     private final InternProfileRepository internProfileRepository;
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final NotificationPublisher notificationPublisher;
 
     // Lấy danh sách phụ cấp với filter
     public Map<String, Object> getAllAllowances(String internId, String startDate, String endDate, int page, int size) {
@@ -165,6 +167,15 @@ public class AllowanceService {
                     .build();
 
             AllowancePayment saved = allowanceRepository.save(allowance);
+
+            if (intern.getUser() != null && intern.getUser().getId() != null) {
+                notificationPublisher.publish(
+                        intern.getUser().getId().toString(),
+                        "ALLOWANCE",
+                        "Bạn vừa nhận được phụ cấp mới",
+                        "Phụ cấp " + amount + " VNĐ vào " + date + " đã được thêm vào tài khoản của bạn"
+                );
+            }
 
             return Map.of(
                     "success", true,

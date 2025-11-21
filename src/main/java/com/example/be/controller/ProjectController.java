@@ -1,5 +1,6 @@
 package com.example.be.controller;
 
+import com.example.be.dto.InternResponse;
 import com.example.be.dto.ProjectRequest;
 import com.example.be.entity.InternProfile;
 import com.example.be.service.ProjectService;
@@ -56,7 +57,7 @@ public class ProjectController {
     public ProjectRequest addInternToProject(@PathVariable Long projectId,
                                              @PathVariable Long userId,
                                              @PathVariable Long internId) {
-        return projectService.addInternToProject(projectId, internId, userId);
+        return projectService.addInternToProject(projectId, internId);
     }
 
 
@@ -67,12 +68,10 @@ public class ProjectController {
             @RequestParam Long newProjectId,
             @RequestParam Long userId
     ) {
-        try {
-            InternProfile updated = projectService.transferInternToAnotherProject(internId, newProjectId, userId);
+
+            InternResponse updated = projectService.transferInternToAnotherProject(internId, newProjectId, userId);
             return ResponseEntity.ok(updated);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+
     }
 
     // ✅ API: HR xóa intern khỏi project
@@ -82,7 +81,7 @@ public class ProjectController {
             @RequestParam Long userId
     ) {
         try {
-            InternProfile updated = projectService.removeInternFromProject(internId, userId);
+            InternResponse updated = projectService.removeInternFromProject(internId, userId);
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

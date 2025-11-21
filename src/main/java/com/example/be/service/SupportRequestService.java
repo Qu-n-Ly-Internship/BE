@@ -3,6 +3,7 @@ package com.example.be.service;
 import com.example.be.dto.SupportRequestDTO;
 import com.example.be.entity.SupportRequest;
 import com.example.be.dto.SupportRequestResponse;
+import com.example.be.notification.service.NotificationPublisher;
 import com.example.be.repository.SupportRequestRepository;
 import com.example.be.repository.InternProfileRepository;
 import com.example.be.entity.InternProfile;
@@ -27,7 +28,8 @@ import java.util.Map;
 public class SupportRequestService {
     private final SupportRequestRepository supportRequestRepository;
     private final CloudinaryRestService cloudinaryRestService;
-    private final InternProfileRepository internProfileRepository; // ⭐ THÊM
+    private final InternProfileRepository internProfileRepository;
+    private final NotificationPublisher notificationPublisher;
 
     public SupportRequest createRequest(SupportRequestDTO dto) {
         SupportRequest request = SupportRequest.builder()
@@ -38,6 +40,7 @@ public class SupportRequestService {
                 .attachmentFileId(dto.getAttachmentFileId())
                 .priority(dto.getPriority())
                 .build();
+
         return supportRequestRepository.save(request);
     }
 
@@ -121,7 +124,15 @@ public class SupportRequestService {
             request.setResolvedAt(now);
         }
         request.setRespondedAt(now);
-
+        Integer targetUserId = request.getUserId();
+        if (targetUserId != null) {
+            notificationPublisher.publish(
+                    targetUserId.toString(),
+                    "SUPPORT_REQUEST",
+                    "Bạn đã được duyệt phụ cấp",
+                    "Yêu cầu phụ cấp hỗ trợ đã được HR xử lý"
+            );
+        }
         return supportRequestRepository.save(request);
     }
 
