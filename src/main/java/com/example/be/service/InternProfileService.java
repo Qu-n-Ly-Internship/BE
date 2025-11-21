@@ -321,10 +321,8 @@ public class InternProfileService {
 
         if (currentProgramId != null) {
             jdbcTemplate.update(
-                    "UPDATE intern_programs SET title = ?, start_date = ?, end_date = ? WHERE program_id = ?",
+                    "UPDATE intern_programs SET title = ? WHERE program_id = ?",
                     title.trim(),
-                    request.get("startDate"),
-                    request.get("endDate"),
                     currentProgramId
             );
             return currentProgramId;
