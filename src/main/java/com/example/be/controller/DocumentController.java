@@ -1,7 +1,9 @@
 package com.example.be.controller;
 
+import com.example.be.notification.service.NotificationPublisher;
 import com.example.be.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -12,10 +14,39 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/documents")
 @RequiredArgsConstructor
+@Slf4j
 public class DocumentController {
 
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
+    private final NotificationPublisher notificationPublisher;
+
+
+    // ========================================
+    // HELPER: Lấy user_id từ intern_id
+    // ========================================
+    private Long getUserIdByInternId(Long internId) {
+        try {
+            String sql = "SELECT user_id FROM intern_profiles WHERE intern_id = ?";
+            return jdbcTemplate.queryForObject(sql, Long.class, internId);
+        } catch (Exception e) {
+            log.warn("Could not find user_id for intern_id: {}", internId);
+            return null;
+        }
+    }
+
+    // ========================================
+    // HELPER: Gửi notification an toàn
+    // ========================================
+    private void sendNotificationSafe(Long userId, String type, String title, String message) {
+        if (userId == null) return;
+        try {
+            notificationPublisher.publish(userId.toString(), type, title, message);
+            log.info("✅ Notification sent to userId: {}", userId);
+        } catch (Exception e) {
+            log.error("❌ Failed to send notification: {}", e.getMessage());
+        }
+    }
 
     // 1. Lấy tất cả tài liệu với filter
     @GetMapping("")
@@ -337,6 +368,8 @@ public class DocumentController {
 
             jdbcTemplate.update(insertSql, finalInternId, fileName, documentType, fileDetail);
 
+
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Tải lên thành công! Chờ HR duyệt.",
@@ -360,17 +393,16 @@ public class DocumentController {
     @PutMapping("/{id}/approve")
     public ResponseEntity<?> approveDocument(@PathVariable Long id) {
         try {
-            // Check document exists
-            String checkSql = "SELECT COUNT(*) FROM intern_documents WHERE document_id = ?";
-            int count = jdbcTemplate.queryForObject(checkSql, Integer.class, id);
+            String checkSql = "SELECT intern_id FROM intern_documents WHERE document_id = ?";
+            List<Map<String, Object>> result = jdbcTemplate.queryForList(checkSql, id);
 
-            if (count == 0) {
+            if (result.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
                         "message", "Không tìm thấy tài liệu với ID: " + id
                 ));
             }
-
+            Long internId = ((Number) result.get(0).get("intern_id")).longValue();
             // Update status to APPROVED
             String updateSql = """
                     UPDATE intern_documents 
@@ -380,6 +412,11 @@ public class DocumentController {
                     """;
 
             jdbcTemplate.update(updateSql, id);
+
+            Long userId = getUserIdByInternId(internId);
+            sendNotificationSafe(userId, "DOCUMENT",
+                    "Tài liệu đã được duyệt!",
+                    "Tài liệu của bạn đã được HR phê duyệt.");
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -409,16 +446,17 @@ public class DocumentController {
                 ));
             }
 
-            // Check document exists
-            String checkSql = "SELECT COUNT(*) FROM intern_documents WHERE document_id = ?";
-            int count = jdbcTemplate.queryForObject(checkSql, Integer.class, id);
+            String checkSql = "SELECT intern_id FROM intern_documents WHERE document_id = ?";
+            List<Map<String, Object>> result = jdbcTemplate.queryForList(checkSql, id);
 
-            if (count == 0) {
+            if (result.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
                         "message", "Không tìm thấy tài liệu với ID: " + id
                 ));
             }
+
+            Long internId = ((Number) result.get(0).get("intern_id")).longValue();
 
             // Update status to REJECTED với lý do
             String updateSql = """
@@ -430,6 +468,10 @@ public class DocumentController {
                     """;
 
             jdbcTemplate.update(updateSql, rejectionReason.trim(), id);
+            Long userId = getUserIdByInternId(internId);
+            sendNotificationSafe(userId, "DOCUMENT",
+                    "Tài liệu bị từ chối",
+                    "Tài liệu của bạn bị từ chối. Lý do: " + rejectionReason.trim());
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -462,16 +504,17 @@ public class DocumentController {
             }
 
             // Check document exists
-            String checkSql = "SELECT COUNT(*) FROM intern_documents WHERE document_id = ?";
-            int count = jdbcTemplate.queryForObject(checkSql, Integer.class, id);
+            String checkSql = "SELECT intern_id FROM intern_documents WHERE document_id = ?";
+            List<Map<String, Object>> result = jdbcTemplate.queryForList(checkSql, id);
 
-            if (count == 0) {
+            if (result.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
                         "message", "Không tìm thấy tài liệu với ID: " + id
                 ));
             }
-
+            Long internId = ((Number) result.get(0).get("intern_id")).longValue();
+            Long userId = getUserIdByInternId(internId);
             if (action.equals("APPROVE")) {
                 // Lưu ghi chú duyệt (nếu có) vào cột rejection_reason như review_note
                 String updateSql = """
@@ -482,7 +525,10 @@ public class DocumentController {
                         WHERE document_id = ?
                         """;
                 jdbcTemplate.update(updateSql, note != null && !note.trim().isEmpty() ? note.trim() : null, id);
-
+                // ✅ Gửi notification
+                sendNotificationSafe(userId, "DOCUMENT",
+                        "Tài liệu đã được duyệt!",
+                        "Tài liệu của bạn đã được HR phê duyệt.");
                 return ResponseEntity.ok(Map.of(
                         "success", true,
                         "message", "Tài liệu đã được duyệt!",
@@ -505,7 +551,10 @@ public class DocumentController {
                         WHERE document_id = ?
                         """;
                 jdbcTemplate.update(updateSql, note.trim(), id);
-
+                // ✅ Gửi notification
+                sendNotificationSafe(userId, "DOCUMENT",
+                        "Tài liệu bị từ chối",
+                        "Tài liệu của bạn bị từ chối. Lý do: " + note.trim());
                 return ResponseEntity.ok(Map.of(
                         "message", "Tài liệu đã bị từ chối: " + note
                 ));
@@ -563,6 +612,13 @@ public class DocumentController {
                     """;
 
             jdbcTemplate.update(insertSql, internId, fileName, documentType, fileDetail);
+
+            // ✅ THÊM: Gửi notification cho intern
+            Long userId = getUserIdByInternId(internId);
+
+            sendNotificationSafe(userId, "DOCUMENT",
+                    "Bạn có hợp đồng mới cần xác nhận!",
+                    "HR đã tải lên " + documentType + " cho bạn. Hãy kiểm tra và xác nhận.");
 
             return ResponseEntity.ok(Map.of(
                     "success", true,

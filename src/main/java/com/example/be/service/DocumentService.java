@@ -3,11 +3,13 @@ package com.example.be.service;
 import com.example.be.entity.Hr;
 import com.example.be.entity.InternDocument;
 import com.example.be.entity.InternProfile;
+import com.example.be.notification.service.NotificationPublisher;
 import com.example.be.repository.DocumentRepository;
 import com.example.be.repository.HrRepository;
 import com.example.be.repository.InternProfileRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,7 +22,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class DocumentService {
+
 
     @Autowired
     private CloudinaryRestService cloudinaryRestService;
@@ -35,6 +39,8 @@ public class DocumentService {
     private HrRepository hrRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private final NotificationPublisher notificationPublisher;
 
     // ====================================================
     // 1️⃣ UPLOAD FILE LÊN CLOUDINARY + LƯU DB
@@ -67,7 +73,17 @@ public class DocumentService {
         doc.setReviewedAt(LocalDateTime.now());
 
         // Lưu vào DB
-        return documentRepository.save(doc);
+        InternDocument savedDoc = documentRepository.save(doc);
+
+        // 🔔 Gửi notification tới intern
+        notificationPublisher.publish(
+                internProfile.getUser().getId().toString(),
+                "DOCUMENT",
+                "Bạn có hợp đồng mới cần xác nhận!",
+                "Hãy kiểm tra hợp đồng vừa được tải lên"
+        );
+
+        return savedDoc;
     }
 
 
