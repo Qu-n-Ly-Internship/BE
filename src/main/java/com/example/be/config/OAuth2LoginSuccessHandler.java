@@ -3,9 +3,13 @@ package com.example.be.config;
 import com.example.be.entity.User;
 import com.example.be.service.AuthService;
 import com.example.be.service.JwtService;
+import com.example.be.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -17,6 +21,9 @@ import lombok.RequiredArgsConstructor;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Component
 @RequiredArgsConstructor
@@ -24,6 +31,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private static final Logger logger = LoggerFactory.getLogger(OAuth2LoginSuccessHandler.class);
     private final JwtService jwtService;
     private final AuthService authService;
+    private final UserRepository userRepository;
+    private final OAuth2AuthorizedClientService authorizedClientService; // ✅ THÊM
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -35,6 +44,37 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
             User user = authService.processOAuthPostLogin(oAuth2User);
             logger.debug("Processed user: {}", user);
+
+            // ✅ LƯU GOOGLE ACCESS TOKEN
+            if (authentication instanceof OAuth2AuthenticationToken) {
+                OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+
+                OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
+                        oauthToken.getAuthorizedClientRegistrationId(),
+                        oauthToken.getName()
+                );
+
+                if (client != null && client.getAccessToken() != null) {
+                    // Lưu access token vào database
+                    user.setGoogleAccessToken(client.getAccessToken().getTokenValue());
+
+                    // Lưu refresh token nếu có
+                    if (client.getRefreshToken() != null) {
+                        user.setGoogleRefreshToken(client.getRefreshToken().getTokenValue());
+                    }
+
+                    // Lưu thời gian hết hạn
+                    if (client.getAccessToken().getExpiresAt() != null) {
+                        Instant expiresAt = client.getAccessToken().getExpiresAt();
+                        user.setTokenExpiryDate(
+                                LocalDateTime.ofInstant(expiresAt, ZoneId.systemDefault())
+                        );
+                    }
+
+                    userRepository.save(user);
+                    logger.info("✅ Saved Google access token for user: {}", user.getEmail());
+                }
+            }
 
             String token = jwtService.generateToken(user.getEmail());
             logger.debug("Generated token: {}", token);

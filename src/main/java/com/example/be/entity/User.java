@@ -4,7 +4,7 @@ import java.util.Set;
 
 import jakarta.persistence.*;
 import lombok.*;
-
+import java.time.LocalDateTime;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -54,5 +54,14 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "role_id")
     private Role role;
+
+    @Column(name = "google_access_token", length = 500)
+    private String googleAccessToken;
+
+    @Column(name = "google_refresh_token", length = 500)
+    private String googleRefreshToken;
+
+    @Column(name = "token_expiry_date")
+    private LocalDateTime tokenExpiryDate;
 }
 

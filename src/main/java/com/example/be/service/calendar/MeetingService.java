@@ -61,30 +61,63 @@ public class MeetingService {
 
         Meeting savedMeeting = meetingRepository.save(meeting);
 
-        // Sync to Google Calendar (if token available)
+        // ✅ Sync to Google Calendar
         String googleEventId = null;
         try {
-            // TODO: Get real access token
-            // String accessToken = getInternAccessToken(internUser.getId());
+            // Lấy access token từ database
+            String accessToken = internUser.getGoogleAccessToken();
 
-            // googleEventId = googleCalendarService.createEvent(
-            //     accessToken,
-            //     request.getTitle(),
-            //     request.getDescription(),
-            //     request.getStartTime(),
-            //     request.getEndTime(),
-            //     request.getLocation(),
-            //     internUser.getEmail()
-            // );
+            System.out.println("========== DEBUG GOOGLE CALENDAR SYNC ==========");
+            System.out.println("📧 Intern email: " + internUser.getEmail());
+            System.out.println("🔑 Auth provider: " + internUser.getAuthProvider());
+            System.out.println("🎫 Access token: " + (accessToken != null ? "CÓ (length=" + accessToken.length() + ")" : "❌ NULL"));
 
-            // savedMeeting.setGoogleEventId(googleEventId);
-            // meetingRepository.save(savedMeeting);
+            if (accessToken != null && accessToken.length() > 50) {
+                System.out.println("🎫 Token preview: " + accessToken.substring(0, 50) + "...");
+            }
 
-            System.out.println("⚠️ Google Calendar sync is disabled - need OAuth token");
+            System.out.println("📅 Meeting title: " + request.getTitle());
+            System.out.println("⏰ Start time: " + request.getStartTime());
+            System.out.println("⏰ End time: " + request.getEndTime());
+            System.out.println("================================================");
+
+            if (accessToken == null || accessToken.isEmpty()) {
+                System.out.println("⚠️ SKIPPED: User chưa có Google access token");
+            } else {
+                System.out.println("🔄 Bắt đầu gọi Google Calendar API...");
+
+                // Gọi Google Calendar API
+                googleEventId = googleCalendarService.createEvent(
+                        accessToken,
+                        request.getTitle(),
+                        request.getDescription(),
+                        request.getStartTime(),
+                        request.getEndTime(),
+                        request.getLocation(),
+                        internUser.getEmail()
+                );
+
+                System.out.println("✅ Google Calendar API trả về Event ID: " + googleEventId);
+
+                if (googleEventId != null && !googleEventId.isEmpty()) {
+                    // Lưu Google Event ID vào database
+                    savedMeeting.setGoogleEventId(googleEventId);
+                    meetingRepository.save(savedMeeting);
+
+                    System.out.println("✅ Đã lưu googleEventId vào database");
+                } else {
+                    System.out.println("⚠️ WARNING: Google Calendar trả về eventId NULL hoặc rỗng!");
+                }
+            }
 
         } catch (Exception e) {
-            System.err.println("❌ Failed to sync with Google Calendar: " + e.getMessage());
-            // Continue anyway
+            System.err.println("❌ ========== GOOGLE CALENDAR ERROR ==========");
+            System.err.println("❌ Error message: " + e.getMessage());
+            System.err.println("❌ Error class: " + e.getClass().getName());
+            System.err.println("❌ Stack trace:");
+            e.printStackTrace();
+            System.err.println("❌ ============================================");
+            // Continue anyway - không fail cả request
         }
 
         // Send notification
@@ -174,6 +207,7 @@ public class MeetingService {
         Meeting updated = meetingRepository.save(meeting);
 
         // TODO: Update Google Calendar event if googleEventId exists
+        // Có thể implement sau nếu cần
 
         return mapToResponse(updated);
     }
@@ -193,6 +227,7 @@ public class MeetingService {
         }
 
         // TODO: Delete from Google Calendar if googleEventId exists
+        // Có thể implement sau nếu cần
 
         meetingRepository.delete(meeting);
     }
