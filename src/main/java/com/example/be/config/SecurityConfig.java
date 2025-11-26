@@ -92,7 +92,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
-        config.setAllowedOriginPatterns(List.of("http://codeft.duckdns.org"));
+        config.setAllowedOriginPatterns(List.of("http://codeft.duckdns.org*"));
 
         // Cho phép tất cả methods
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
