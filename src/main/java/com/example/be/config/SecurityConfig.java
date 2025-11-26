@@ -3,9 +3,11 @@ package com.example.be.config;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -30,6 +32,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {}) // Sử dụng corsFilter bean
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().permitAll() // Cho phép toàn bộ /api/**
                 )
                 .oauth2Login(oauth -> oauth.disable()) // Không dùng OAuth2 cho API
@@ -67,7 +70,7 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)
-                        .failureUrl("http://localhost:5173/login?error=true") // Thêm failure handler
+                        .failureUrl("http://codeft.duckdns.org/login?error=true") // Thêm failure handler
                 );
 
         // Cho phép H2 console chạy trong frame
@@ -77,18 +80,20 @@ public class SecurityConfig {
 
         return http.build();
     }
-
+    @Bean
+    public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
+        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(corsFilter());
+        bean.setOrder(0); // Chạy trước Spring Security
+        return bean;
+    }
     // ======================= CORS =======================
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        
-        // Cho phép credentials (cookies, authorization headers)
+
         config.setAllowCredentials(true);
-        
-        // Cho phép origins
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        
+        config.setAllowedOriginPatterns(List.of("http://codeft.duckdns.org*"));
+
         // Cho phép tất cả methods
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         

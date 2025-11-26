@@ -39,7 +39,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             String token = jwtService.generateToken(user.getEmail());
             logger.debug("Generated token: {}", token);
 
-            String redirectUrl = "http://localhost:5173/oauth2/callback?token="
+            String redirectUrl = "http://codeft.duckdns.org/oauth2/callback?token="
                     + URLEncoder.encode(token, StandardCharsets.UTF_8);
             logger.debug("Redirecting to: {}", redirectUrl);
 
