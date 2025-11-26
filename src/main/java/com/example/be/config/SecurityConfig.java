@@ -70,7 +70,7 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)
-                        .failureUrl("http://codeft.duckdns.org:5173/login?error=true") // Thêm failure handler
+                        .failureUrl("http://codeft.duckdns.org/login?error=true") // Thêm failure handler
                 );
 
         // Cho phép H2 console chạy trong frame
