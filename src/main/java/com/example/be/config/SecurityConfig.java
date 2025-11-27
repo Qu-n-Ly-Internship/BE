@@ -61,7 +61,7 @@ public class SecurityConfig {
                                 "/oauth2/authorization/**",
                                 "/login/oauth2/**",
                                 "/login/**",
-                                "/error"  // Thêm error endpoint
+                                "/error"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -73,7 +73,6 @@ public class SecurityConfig {
                         .failureUrl("http://codeft.duckdns.org/login?error=true") // Thêm failure handler
                 );
 
-        // Cho phép H2 console chạy trong frame
         http.headers(headers -> headers
                 .frameOptions(frame -> frame.disable())
         );
@@ -99,16 +98,12 @@ public class SecurityConfig {
         
         // Cho phép tất cả headers
         config.setAllowedHeaders(List.of("*"));
-        
-        // Expose headers cho client
         config.setExposedHeaders(List.of(
             "Authorization",
             "Content-Type",
             "X-Total-Count",
             "X-Auth-Token"
         ));
-        
-        // Cache preflight request trong 1 giờ
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
