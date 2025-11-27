@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 @Builder
 public class CreateMeetingRequest {
 
-    @NotNull(message = "Intern ID không được để trống")
-    private Long internId;
+    @NotNull(message = "Program ID không được để trống")
+    private Long programId;
 
     @NotBlank(message = "Tiêu đề không được để trống")
     @Size(max = 200, message = "Tiêu đề không được quá 200 ký tự")

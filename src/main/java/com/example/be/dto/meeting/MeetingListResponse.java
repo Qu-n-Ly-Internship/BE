@@ -1,8 +1,6 @@
 package com.example.be.dto.meeting;
 
-import jakarta.validation.constraints.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Data
@@ -16,6 +14,7 @@ public class MeetingListResponse {
     private LocalDateTime endTime;
     private String location;
     private String status;
-    private String internName;
+    private String programTitle;
+    private Integer internCount;
     private String createdBy;
 }

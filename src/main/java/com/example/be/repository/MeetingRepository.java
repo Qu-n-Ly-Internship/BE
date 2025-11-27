@@ -12,8 +12,8 @@ import java.util.List;
 @Repository
 public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 
-    // Lấy tất cả meetings của 1 intern
-    List<Meeting> findByIntern_Id(Long internId);
+    // ✅ THAY ĐỔI: Lấy meetings theo program_id thay vì intern_id
+    List<Meeting> findByProgram_Id(Long programId);
 
     // Lấy meetings theo HR đã tạo
     List<Meeting> findByCreatedBy_Id(Long hrId);
@@ -28,7 +28,11 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
             @Param("endTime") LocalDateTime endTime
     );
 
-    // Lấy upcoming meetings của intern
-    @Query("SELECT m FROM Meeting m WHERE m.intern.id = :internId AND m.startTime > :now AND m.status = 'SCHEDULED' ORDER BY m.startTime ASC")
-    List<Meeting> findUpcomingMeetingsByIntern(@Param("internId") Long internId, @Param("now") LocalDateTime now);
+    // ✅ Lấy upcoming meetings của một program
+    @Query("SELECT m FROM Meeting m WHERE m.program.id = :programId AND m.startTime > :now AND m.status = 'SCHEDULED' ORDER BY m.startTime ASC")
+    List<Meeting> findUpcomingMeetingsByProgram(@Param("programId") Long programId, @Param("now") LocalDateTime now);
+
+    // ✅ Đếm số meetings của một program
+    @Query("SELECT COUNT(m) FROM Meeting m WHERE m.program.id = :programId")
+    long countByProgramId(@Param("programId") Long programId);
 }

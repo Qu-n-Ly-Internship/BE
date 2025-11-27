@@ -1,9 +1,8 @@
 package com.example.be.dto.meeting;
 
-import jakarta.validation.constraints.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -18,12 +17,14 @@ public class MeetingResponse {
     private LocalDateTime endTime;
     private String location;
     private String status;
-    private String googleEventId;
+    private List<String> googleEventIds;
 
-    // Intern info
-    private Long internId;
-    private String internName;
-    private String internEmail;
+    // Program info
+    private Long programId;
+    private String programTitle;
+
+    // Interns info
+    private List<InternInfo> interns;
 
     // HR info
     private Long hrId;
@@ -32,4 +33,16 @@ public class MeetingResponse {
     // Timestamps
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class InternInfo {
+        private Long internId;
+        private String internName;
+        private String internEmail;
+        private String authProvider;
+        private boolean calendarSynced;
+    }
 }

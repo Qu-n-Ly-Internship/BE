@@ -35,15 +35,15 @@ public class Meeting {
     private String location;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "intern_id", nullable = false)
-    private InternProfile intern;
+    @JoinColumn(name = "program_id", nullable = false)
+    private Project program;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_hr")
     private Hr createdBy;
 
-    @Column(name = "google_event_id")
-    private String googleEventId; // ID của event trên Google Calendar
+    @Column(name = "google_event_ids", columnDefinition = "TEXT")
+    private String googleEventIds;
 
     @Column(name = "status")
     private String status; // SCHEDULED, COMPLETED, CANCELLED
@@ -60,7 +60,7 @@ public class Meeting {
             this.createdAt = LocalDateTime.now();
         }
         if (this.status == null) {
-            this.status = "SCHEDULED";
+            this.status = "Đã tạo lịch";
         }
         this.updatedAt = LocalDateTime.now();
     }
