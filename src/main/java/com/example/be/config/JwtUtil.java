@@ -3,15 +3,24 @@ package com.example.be.config;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
-    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    private final long EXPIRATION = 1000 * 60 * 60; // 1h
+    // ✅ THAY ĐỔI: Dùng key từ application.properties
+    private final SecretKey key;
+    private final long EXPIRATION = 1000 * 60 * 60 * 24; // 24h (giống JwtService)
+
+    // ✅ THÊM: Constructor inject secret từ config
+    public JwtUtil(@Value("${jwt.secret}") String secret) {
+        // Tạo key từ secret string
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
 
     public String generateToken(String email, String role) {
         return Jwts.builder()

@@ -26,19 +26,18 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain apiSecurity(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/**") // RẤT QUAN TRỌNG
+                .securityMatcher("/api/**")
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {}) // Sử dụng corsFilter bean
+                .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // Cho phép toàn bộ /api/**
+                        .anyRequest().permitAll()
                 )
-                .oauth2Login(oauth -> oauth.disable()) // Không dùng OAuth2 cho API
+                .oauth2Login(oauth -> oauth.disable())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
-                // Thêm session management để tránh tạo session không cần thiết
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(
-                            org.springframework.security.config.http.SessionCreationPolicy.STATELESS
+                                org.springframework.security.config.http.SessionCreationPolicy.STATELESS
                         )
                 );
 
@@ -51,14 +50,14 @@ public class SecurityConfig {
     public SecurityFilterChain webSecurity(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {}) // Sử dụng corsFilter bean
+                .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/oauth2/**",
                                 "/oauth2/authorization/**",
                                 "/login/oauth2/**",
                                 "/login/**",
-                                "/error"  // Thêm error endpoint
+                                "/error"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -67,10 +66,9 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)
-                        .failureUrl("http://localhost:5173/login?error=true") // Thêm failure handler
+                        .failureUrl("http://localhost:5173/login?error=true")
                 );
 
-        // Cho phép H2 console chạy trong frame
         http.headers(headers -> headers
                 .frameOptions(frame -> frame.disable())
         );
@@ -82,28 +80,17 @@ public class SecurityConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        
-        // Cho phép credentials (cookies, authorization headers)
+
         config.setAllowCredentials(true);
-        
-        // Cho phép origins
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        
-        // Cho phép tất cả methods
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        
-        // Cho phép tất cả headers
         config.setAllowedHeaders(List.of("*"));
-        
-        // Expose headers cho client
         config.setExposedHeaders(List.of(
-            "Authorization",
-            "Content-Type",
-            "X-Total-Count",
-            "X-Auth-Token"
+                "Authorization",
+                "Content-Type",
+                "X-Total-Count",
+                "X-Auth-Token"
         ));
-        
-        // Cache preflight request trong 1 giờ
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

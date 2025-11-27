@@ -3,20 +3,25 @@ package com.example.be.service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
 public class JwtService {
     private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
-    private final String SECRET_KEY;
+    private final SecretKey key;
+    private final long EXPIRATION = 1000 * 60 * 60 * 24; // 24h
 
     public JwtService(@Value("${jwt.secret}") String secretKey) {
-        this.SECRET_KEY = secretKey;
+        // ✅ Dùng cùng cách tạo key với JwtUtil
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(String username) {
@@ -28,8 +33,8 @@ public class JwtService {
             return Jwts.builder()
                     .setSubject(username)
                     .setIssuedAt(new Date(System.currentTimeMillis()))
-                    .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // 24h
-                    .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                    .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                    .signWith(key) // ✅ Dùng signWith(key) thay vì signWith(algorithm, key)
                     .compact();
         } catch (Exception e) {
             logger.error("JWT generation error for username: {}", username, e);
@@ -39,12 +44,13 @@ public class JwtService {
 
     public String extractUsername(String token) {
         try {
-            logger.debug("Extracting username from token: {}", token);
+            logger.debug("Extracting username from token");
             if (token == null || token.isEmpty()) {
                 throw new IllegalArgumentException("Token cannot be null or empty");
             }
-            Claims claims = Jwts.parser()
-                    .setSigningKey(SECRET_KEY)
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
                     .parseClaimsJws(token)
                     .getBody();
             return claims.getSubject();
