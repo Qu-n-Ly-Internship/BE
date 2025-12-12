@@ -70,7 +70,7 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)
-                        .failureUrl("http://codeft.duckdns.org/login?error=true") // Thêm failure handler
+                        .failureUrl("http://localhost:5173/login?error=true") // Thêm failure handler
                 );
 
         http.headers(headers -> headers
